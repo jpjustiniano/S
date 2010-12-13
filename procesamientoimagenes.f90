@@ -5,8 +5,11 @@
  Program ProcesamientoImagenes
  use netcdf
  implicit none
- 
  Integer :: errorread
+ character (4) :: ano
+ character (2) :: mes, dia, hora, minu
+ Integer :: iano, imes, idia, ihora, iminu, imesp=1
+ Integer :: ifoto					! 1:media_hora; 2:south_full
  Real    :: az,el,ha,dec,soldst
  Logical :: 
  character (len = *) :: argument, filename
@@ -14,6 +17,9 @@
  real, parameter :: lat = -33., long = -70.
 
  !*********************************************************************** Fin declaracion Variables
+ 
+ open (unit=6, file='log.txt')
+ 
  call get_command_argument(1, argument)
  OPEN (unit=8, file=trim(argument), status='old', IOSTAT=errorread)  
  IF(errorread/=0) print *, " error en apertura de archivo con lista de entrada" ; Exit 2
@@ -22,29 +28,45 @@
  IF(errorread == -1) print *, " Terminado el procesamiento de imagenes"
  IF(errorread > 0) print *, " Error en lectura de nombre de archivo en archivo lista ", filename
  
- OPEN (unit=10, file=trim(filename), status='old', IOSTAT=errorread)
- IF(errorread /= 0) print *, " Error en apertura de archivo de lista." ; Exit 2
- 
  string = trim(filename)
  ano=string(1:4)
  mes=string(5:6)
  dia=string(7:8)
  hora=string(9:10)
  minu=string(11:12)
+ foto=string(18:27)
  READ (iano,'(I4)') ano
  READ (imes,'(I2)') mes
  READ (idia,'(I2)') dia
  READ (ihora,'(I2)') hora
  READ (iminu,'(I2)') minu
  
+ 
+ If (foto=='media_hora') then
+	ifoto = 1
+ ElseIf (foto=='south_full') then
+	ifoto = 2
+ Else 
+	ifoto = 0
+ End If
+ 
  call diajuliano (idia, imes, iano, diaj)
  call sunae(iano,diaj,ihora,lat,long,az,el,ha,dec,soldst)
  
  if (el < 7.0) then
   print *, " Imagen ", trim(filename)," eliminada, nocturna."
-  close (10)
+  write (6.*) trim(filename)," eliminada, nocturna."
   goto 100
  end if
+  
+ If (imesp /= imes) then
+ 
+ 
+ end if
+  
+ OPEN (unit=10, file=trim(filename), status='old', IOSTAT=errorread)
+ IF(errorread /= 0) print *, " Error en apertura de archivo de lista." ; Exit 2
+ 
  
  ! Lectura de datos de encabezado de archivo, dimensiones, lineas columnas
  ! Lectura pixel por pixel
@@ -55,7 +77,18 @@
  
  
  
- END Program ProcesamientoImagenes
+ 
+ 
+ contains
+ subroutine check(status)
+  integer, intent ( in) :: status
+  if(status /= nf90_noerr) then
+    print *, trim(nf90_strerror(status))
+    stop 2
+  end if
+ end subroutine check
+ 
+ end Program ProcesamientoImagenes
 
 !*********************************************************************** /Main
 
