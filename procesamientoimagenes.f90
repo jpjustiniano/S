@@ -1,46 +1,93 @@
-! Copyright (C) 2010, Juan Pablo Justiniano 
+! Copyright (C) 2010, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
+! Programa para el filtraje y almacenamiento de imagenes satelitales en un archivo mensual.
 
+! gfortran -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o "%e" "%f"
 ! Optimizar subrutina de calculo de elevacion
+
+!Canal 1: [1728, 9020]
+!Canal 4: [432, 2255]
+
+!Imagen Media Hora:
+!Canal 1_SI: [1, 3700]
+!Canal 1_ID: [1728, 5800]
+ 
+!Canal 4_SI: [1, 925]
+!Canal 4_ID: [432, 1450]
 
  Program ProcesamientoImagenes
  use netcdf
  implicit none
+ 
+ integer, parameter :: latitud = -33., longitud = -70.
+ ! Variables Programa
  Integer :: errorread
  character (4) :: ano
- character (2) :: mes, dia, hora, minu
- Integer :: iano, imes, idia, ihora, iminu, imesp=1
+ character (2) :: mes, cdia, hora, minu
+ character (2) :: foto
+ Integer :: iano, imes, idia, ihora, iminu, imesp=0, diaj
  Integer :: ifoto					! 1:media_hora; 2:south_full
  Real    :: az,el,ha,dec,soldst
- Logical :: 
- character (len = *) :: argument, filename
- character (len = 12) :: string
- real, parameter :: lat = -33., long = -70.
-
- !*********************************************************************** Fin declaracion Variables
+ character (30) :: argument  ! Nombre de archivo de lista
+ character (30) :: filename  ! Nombres dentro de la lista
+ character (12) :: filename_out
+ character (len = 27) :: string
+ !real, parameter :: lat = -33., long = -70.
+ integer :: i=1,j=1, lat, lon, rec
  
+ ! Variables NETCDF 
+ integer :: ncid , dia =31
+ integer, parameter :: NDIMS = 3	      ! We are writing 2D data.
+ integer, parameter :: NX = 432, NY = 526 , Nrec =4
+
+ real :: x(NX), y(NY), xf(4*NX), yf(4*NY)
+ integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
+ integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
+
+ integer :: start(NDIMS), count(NDIMS)
+
+ integer, dimension(:,:), allocatable :: CH1_out, CH4_out
+ integer :: CH1_varid, Ch4_varid
+ integer :: dimids(NDIMS), dimids_fine(NDIMS)
+   
+ allocate(CH1_out (4*NY, 4*NX)) ! Allocate memory for data.
+ allocate(CH4_out (NY, NX))
+
+!********************************************************** Fin declaracion Variables
+
+ print *, 'Recorte de imagenes NetCDF v 0.1'
  open (unit=6, file='log.txt')
  
- call get_command_argument(1, argument)
+ call get_command_argument(1, argument) ! Nombre de archivo lista.txt
  OPEN (unit=8, file=trim(argument), status='old', IOSTAT=errorread)  
- IF(errorread/=0) print *, " error en apertura de archivo con lista de entrada" ; Exit 2
+ If(errorread/=0) then
+	print *, " error en apertura de archivo con lista de entrada" 
+	go to 999 
+ End If
  
  100 read (8,*, IOSTAT=errorread) filename
- IF(errorread == -1) print *, " Terminado el procesamiento de imagenes"
- IF(errorread > 0) print *, " Error en lectura de nombre de archivo en archivo lista ", filename
+ if(errorread == -1) then
+	print *, " Terminado el procesamiento de imagenes"
+	go to 999
+ End if
+ if(errorread > 0) then
+	print *, " Error en lectura de nombre de archivo en archivo lista ", filename
+	go to 999
+ end if
  
  string = trim(filename)
  ano=string(1:4)
  mes=string(5:6)
- dia=string(7:8)
+ cdia=string(7:8)
  hora=string(9:10)
  minu=string(11:12)
  foto=string(18:27)
  READ (iano,'(I4)') ano
  READ (imes,'(I2)') mes
- READ (idia,'(I2)') dia
+ READ (idia,'(I2)') cdia
  READ (ihora,'(I2)') hora
  READ (iminu,'(I2)') minu
  
+ ihora = ihora + iminu/60.
  
  If (foto=='media_hora') then
 	ifoto = 1
@@ -51,21 +98,113 @@
  End If
  
  call diajuliano (idia, imes, iano, diaj)
- call sunae(iano,diaj,ihora,lat,long,az,el,ha,dec,soldst)
+ call sunae(iano,real(diaj),ihora, latitud, longitud,az,el,ha,dec,soldst)
  
  if (el < 7.0) then
   print *, " Imagen ", trim(filename)," eliminada, nocturna."
-  write (6.*) trim(filename)," eliminada, nocturna."
+  write (6,*) trim(filename)," eliminada, nocturna."
   goto 100
  end if
   
  If (imesp /= imes) then
- 
- 
+ !*********************************************************************** Definiciones NetCDF
+  filename_out = ano//mes// '.nc'
+  call check( nf90_create(filename_out,NF90_64BIT_OFFSET, ncid) ) !
+  call check( nf90_def_dim(ncid, "x", NX, x_dimid) )  ! Define the dimensions. 
+  call check( nf90_def_dim(ncid, "y", NY, y_dimid) )
+  call check( nf90_def_dim(ncid, "xf", NX, xf_dimid) )  ! Define the dimensions. 
+  call check( nf90_def_dim(ncid, "yf", NY, yf_dimid) )
+  call check( nf90_def_dim(ncid, "dia", dia,  dia_dimid) )
+  call check( nf90_def_dim(ncid, "hora", NF90_UNLIMITED, hora_dimid) )
+  
+  call check( nf90_def_var(ncid,"x", NF90_REAL, x_dimid, x_varid) )	! Define the coordinate variables
+  call check( nf90_def_var(ncid,"y", NF90_REAL, y_dimid, y_varid) )
+  call check( nf90_def_var(ncid,"xf", NF90_REAL, xf_dimid, xf_varid) )	
+  call check( nf90_def_var(ncid,"yf", NF90_REAL, yf_dimid, yf_varid) )
+  call check( nf90_def_var(ncid,"hora", NF90_INT, hora_dimid, hora_varid) )
+  
+! Assign units attributes to coordinate variables.
+	call check( nf90_put_att(ncid, x_varid, "units", "degrees_north"))
+    call check( nf90_put_att(ncid, y_varid, "units", "degrees_east") )
+
+    dimids =  (/ y_dimid, x_dimid, hora_dimid /) ! The dimids array is used to pass the IDs of the dimensions
+    dimids_fine =  (/ yf_dimid, xf_dimid, hora_dimid /)
+    
+    call check( nf90_def_var(ncid, "CH1", NF90_INT, dimids_fine, CH1_varid) )  ! Define the variable and type. NF90_INT (4-byte integer)
+    call check( nf90_def_var(ncid, "CH4", NF90_INT, dimids, CH4_varid) )
+
+    ! Assign units attributes to the netCDF variables.
+    call check( nf90_put_att(ncid, CH1_varid, "units", "Albedo") )
+	call check( nf90_put_att(ncid, CH4_varid, "units", "Deg_C") )
+	call check( nf90_put_att(ncid, NF90_GLOBAL, "mes", mes) )  
+	call check( nf90_put_att(ncid, NF90_GLOBAL, "ano", ano) )  
+	call check( nf90_put_att(ncid, NF90_GLOBAL, "NX", "432") )  
+	call check( nf90_put_att(ncid, NF90_GLOBAL, "NY", "526") )  
+  
+	! End define mode.
+	call check( nf90_enddef(ncid) )
+ !*********************************************************************** Fin Definiciones NetCDF	
+
+   do i = 1, NX
+	  x(i) = i
+   end do
+   do j = 1, NY
+	  y(j) = j
+   end do	
+   do i = 1, 4*NX
+	  xf(i) = 4*i
+   end do
+   do j = 1, 4*NY
+	  yf(j) = 4*j
+   end do	
+   
+   ! Entrada temporal de datos.
+ !do k = 1, ND
+  do j= 1, NX
+	 do i= 1, NY
+		CH4_out(i, j) = j + i
+	 end do
+  end do
+	do j = 1, 4*NX
+	 do i = 1, 4*NY
+		CH1_out(i, j) = i
+	 end do
+	end do
+ !end do
+   
+   ! Write the coordinate variable data. This will put the latitudes
+   ! and longitudes of our data grid into the netCDF file.
+   call check( nf90_put_var(ncid, x_varid, x) )
+   call check( nf90_put_var(ncid, y_varid, y) )	
+   call check( nf90_put_var(ncid, xf_varid, xf) )
+   call check( nf90_put_var(ncid, yf_varid, yf)	)
+	
+	
+	count = (/ NX, NY, 1 /)
+    start = (/ 1, 1, 1 /)
+	do rec = 1, nrec
+	  start(3) = rec
+	  call check( nf90_put_var(ncid,CH4_varid, CH4_out, start = start, &
+							   count = count) )
+	end do
+	count = (/ 4*NX, 4*NY, 1/)
+    start = (/ 1, 1, 1 /)
+	do rec = 1, nrec
+	  start(3) = rec
+	  call check( nf90_put_var(ncid, CH1_varid, CH1_out, start = start, &
+							   count = count) )
+	end do
+	
+	
+	
+   call check( nf90_close(ncid) )
  end if
   
  OPEN (unit=10, file=trim(filename), status='old', IOSTAT=errorread)
- IF(errorread /= 0) print *, " Error en apertura de archivo de lista." ; Exit 2
+ if (errorread /= 0) then
+	print *, " Error en apertura de archivo de lista." 
+	go to 999
+ End if
  
  
  ! Lectura de datos de encabezado de archivo, dimensiones, lineas columnas
@@ -74,11 +213,7 @@
  
  
  
- 
- 
- 
- 
- 
+ 999 Stop
  contains
  subroutine check(status)
   integer, intent ( in) :: status
@@ -88,7 +223,8 @@
   end if
  end subroutine check
  
- end Program ProcesamientoImagenes
+ 
+ End Program ProcesamientoImagenes
 
 !*********************************************************************** /Main
 
@@ -158,7 +294,7 @@ END DO
 END SUBROUTINE diajuliano
 
 
- SUBROUTINE sunae(year,day,hour,lat,long,az,el,ha,dec,soldst)
+ SUBROUTINE sunae(year,day,hour, lat, long,az,el,ha,dec,soldst)
  !Real, intent(in) :: year
  !Real, intent(in) :: day
  !Real, intent(in) :: hour
@@ -178,8 +314,10 @@ END SUBROUTINE diajuliano
 !
 !  	Work with real variables and define some constants, including
 !  	one to change between degs and radians.
+
 implicit real (a-z)
 data twopi,pi,rad/6.2831853,3.1415927,.017453293/
+
       
 !   get the current julian date (actually add 2,400,000 for jd)
       delta=year-1949.
