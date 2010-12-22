@@ -5,6 +5,8 @@
 ! do rec = 1, NRECS
 !   start(4) = rec
 !   call check( nf90_put_var(ncid, temp_varid, temp_out, start = start,count = count) )
+
+
      program variables
        use netcdf
        implicit none
