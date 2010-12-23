@@ -23,7 +23,7 @@
  
  real :: latitud = -33., longitud = -70.
  ! Variables Programa
- Integer :: errorread, tz=-3
+ Integer :: errorread
  character (4) :: ano
  character (2) :: mes, cdia, hora, minu
  character (2) :: foto
@@ -34,34 +34,33 @@
  character (30) :: filename  ! Nombres dentro de la lista
  character (12) :: filename_out
  character (len = 27) :: string
- !real, parameter :: lat = -33., long = -70.
  integer :: i=1,j=1, rec
  
  ! Variables NETCDF 
  integer :: ncid, ncid_in, dia =31, status
- integer, parameter :: NDIMS = 3	      ! We are writing 2D data.
- integer, parameter :: NX = 432, NY = 526 , Nrec =4
+ integer, parameter :: NDIMS = 3, NDIMS_IN = 2	      ! We are writing 2D data.
+ integer, parameter :: NX = 526, NY = 432 , NXf = 2101, NYf = 1728 
 
- real :: x(NX), y(NY), xf(4*NX), yf(4*NY)
+ real :: x(NX), y(NY), xf(NXf), yf(NYf)
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
  integer :: CH1_varid, Ch4_varid
+ integer, dimension (432,526) :: CH4_in
+ integer, dimension (1728,2101) :: CH1_in
  
- integer :: start(NDIMS), count(NDIMS), count_fine(NDIMS), start_hora(1)
-
+ integer :: start(NDIMS_IN), start_fine(NDIMS_IN), count(NDIMS_IN), count_fine(NDIMS_IN), start_hora(1)
  integer :: dimids(NDIMS), dimids_fine(NDIMS)
    
- allocate(CH1_out (4*NY, 4*NX)) ! Allocate memory for data.
- allocate(CH4_out (NY, NX))
+ allocate(CH1_out (9020, 1728)) ! Allocate memory for data.
+ allocate(CH4_out (2255,432))!(432, 2255))
 
 !********************************************************** Fin declaracion Variables
  
  print *
  print *, 'Recorte de imagenes NetCDF v 0.1 beta'
- print *, ' Horario de verano'
- print *, trim(nf90_inq_libvers())
+ !print *, trim(nf90_inq_libvers())
  print *
  open (unit=16, file='log.txt')
  call get_command_argument(1, argument) ! Nombre de archivo lista.txt
@@ -112,17 +111,18 @@
  Else 
 	ifoto = 0
  End If
-
+ 
  call diajuliano (idia, imes, iano, diaj) 
  call sunae(iano,diaj,ihora, latitud, longitud,az,el,ha,dec,soldst)
- write (*,*) el
+
  if (el < 7.0) then
   write (*,*) " Imagen ", trim(filename),"    eliminada, nocturna."
   write (16,*) trim(filename),"    Eliminada, nocturna."
   goto 100
  end if
+
  If (imesp /= imes) then
-imesp = imes 
+ imesp = imes 
  !*********************************************************************** Definiciones NetCDF
   !call check( nf90_close(ncid) ) ! Cierra el archivo antes de abrir el nuevo.
   filename_out = ano//mes// '.nc'
@@ -130,8 +130,8 @@ imesp = imes
   call check( nf90_create(filename_out,NF90_64BIT_OFFSET, ncid) ) !
   call check( nf90_def_dim(ncid, "x", NX, x_dimid) )  ! Define the dimensions. 
   call check( nf90_def_dim(ncid, "y", NY, y_dimid) )
-  call check( nf90_def_dim(ncid, "xf", 4*NX, xf_dimid) )  ! Define the dimensions. 
-  call check( nf90_def_dim(ncid, "yf", 4*NY, yf_dimid) )
+  call check( nf90_def_dim(ncid, "xf", NXf, xf_dimid) )  ! Define the dimensions. 
+  call check( nf90_def_dim(ncid, "yf", NYf, yf_dimid) )
   call check( nf90_def_dim(ncid, "dia", dia,  dia_dimid) )
   call check( nf90_def_dim(ncid, "hora", NF90_UNLIMITED, hora_dimid) )
   call check( nf90_def_var(ncid,"x", NF90_FLOAT, x_dimid, x_varid) )	! Define the coordinate variables
@@ -168,10 +168,10 @@ imesp = imes
     call check( nf90_put_att(ncid, NF90_GLOBAL, "sensor", 12) )
 	call check( nf90_put_att(ncid, NF90_GLOBAL, "mes", mes) )  
 	call check( nf90_put_att(ncid, NF90_GLOBAL, "ano", ano) )  
-	call check( nf90_put_att(ncid, NF90_GLOBAL, "NX", 432) )  
-	call check( nf90_put_att(ncid, NF90_GLOBAL, "NY", 526) )  
-	call check( nf90_put_att(ncid, NF90_GLOBAL, "NXF", 1728) )
-	call check( nf90_put_att(ncid, NF90_GLOBAL, "NYF", 2104) )
+	call check( nf90_put_att(ncid, NF90_GLOBAL, "NX", 526) )  
+	call check( nf90_put_att(ncid, NF90_GLOBAL, "NY", 432) )  
+	call check( nf90_put_att(ncid, NF90_GLOBAL, "NXF", 2101) )
+	call check( nf90_put_att(ncid, NF90_GLOBAL, "NYF", 1728) )
 	call check( nf90_put_att(ncid, NF90_GLOBAL, "Procesadasx", "JPJ") )
 	
 	
@@ -185,10 +185,10 @@ imesp = imes
    do j = 1, NY
 	  y(j) = j
    end do	
-   do i = 1, 4*NX
+   do i = 1, NXf
 	  xf(i) = i
    end do
-   do j = 1, 4*NY
+   do j = 1, NYf
 	  yf(j) = j
    end do	
    ! Write the coordinate variable data. This will put the latitudes
@@ -230,22 +230,38 @@ imesp = imes
  call check( nf90_inq_varid(ncid_in, "gvar_ch1_fine", CH1_in_varid) )
  call check( nf90_inq_varid(ncid_in, "gvar_ch4", CH4_in_varid) )
 
- ! Read the data.
-   call check( nf90_get_var(ncid_in, CH1_in_varid, CH1_out) )
-   call check( nf90_get_var(ncid_in, CH4_in_varid, CH4_out) )
-   
+! Lectura pixel por pixel
+write (*,*) "2"
  
- ! Check the data.
-   do i = 1, 4*NX
-	  do j = 1, 4*NY
-		 if (CH1_out(j, i) > 10000) then
-			write (16,*) "CH1_out(", j, ", ", i, ") = ", CH1_out(j, i) , filename, iano,diaj,ihora
-		 end if
-		 if (CH1_out(j, i) < -10000 ) then
-			write (16,*) "Pixel malo CH1_out(", j, ", ", i, ") = ", CH1_out(j, i) , filename, iano,diaj,ihora
-		 end if
-	  end do
-   end do
+! start = (/ 1, 925 /)
+! count = (/ NY, 1450/)
+! start_fine = (/ 1, 3700 /)
+! count_fine = (/ NYf, 5800 /)
+ 
+! Do i =1, NY
+!	Do j= 1, NX
+!		start(1) = i
+!		start(2) = j+924
+!		write (*,*) i,j
+!		call check( nf90_get_var(ncid_in, CH4_in_varid, CH4_out))
+!	End do
+! End do	
+		
+   call check( nf90_get_var(ncid_in, CH4_in_varid, CH4_out))
+write (*,*) "3"
+   call check( nf90_get_var(ncid_in, CH1_in_varid, CH1_out))
+write (*,*) "4"
+!! Correccion de datos
+!   do i = 1, NXf
+!	  do j = 1, NYf
+!		 if (CH1_out(j, i) > 10000) then
+!			write (16,*) "CH1_out(", j, ", ", i, ") = ", CH1_out(j, i) , filename, iano,diaj,ihora
+!		 end if
+!		 if (CH1_out(j, i) < -10000 ) then
+!			write (16,*) "Pixel malo CH1_out(", j, ", ", i, ") = ", CH1_out(j, i) , filename, iano,diaj,ihora
+!		 end if
+!	  end do
+!   end do
  
    do i = 1, NX
 	  do j = 1, NY
@@ -253,27 +269,18 @@ imesp = imes
 			write (16,*) "CH4_out(", j, ", ", i, ") = ", CH4_out(j, i), filename, iano,diaj,ihora
 		 end if
 		 if (CH4_out(j, i) < -10000 ) then
-			write (16,*) "Pixel malo CH1_out(", j, ", ", i, ") = ", CH4_out(j, i) , filename, iano,diaj,ihora
+			write (16,*) "Pixel malo CH4_out(", j, ", ", i, ") = ", CH4_out(j, i) , filename, iano,diaj,ihora
 		 end if
 	  end do
    end do
- 
    ! Close the file, freeing all resources.
-   call check( nf90_close(ncid) )
- 
- ! Lectura pixel por pixel
- ! Correccion de datos
-
-! start = (/ 1, 1, 1 /)
-! count = (/ NY, NX, 1 /)
-! count_fine = (/ 4*NY, 4*NX, 1 /)
-! start(3) = rec
-! count(3) = rec
-! count_fine(3) = rec
-
- call check( nf90_put_var(ncid,CH4_varid,CH4_out))
- call check( nf90_put_var(ncid,CH1_varid, CH1_out))
- !call check( nf90_close(ncid_in) )
+ !  call check( nf90_close(ncid) )
+ CH4_in = CH4_out(:,925:1450)
+ write (*,*) "5"
+ CH1_in = CH1_out(:,3700:5800)
+ call check( nf90_put_var(ncid,CH4_varid,CH4_in))
+ call check( nf90_put_var(ncid,CH1_varid, CH1_in))
+ call check( nf90_close(ncid_in) )
  
  Go to 100
  
