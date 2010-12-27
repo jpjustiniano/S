@@ -134,8 +134,8 @@
  call sunae(iano,diaj,ihora, latitud, longitud,az,el,ha,dec,soldst)  ! Comp.
 
  if (el < 7.0) then
-    write (*,*) '   ',cdia,'  ', hora,':', minu, " eliminada, nocturna.", trim(filename)
-    write (16,*) trim(filename),"    Eliminada, nocturna."
+    write (*,*) '   ',cdia,'  ', hora,':', minu, " eliminada, nocturna. "
+    write (16,*) '                                   ', trim(filename),"   Eliminada, nocturna. "
     goto 100
  end if
 
@@ -253,28 +253,38 @@
  ! Correccion de datos      ! Revisar hacia abajo o hacia al lado ??
  do i = 1, NXf
     do j = 1, NYf
-        if (CH1_in(i,j) > 10000) then
-            write (16,*) "CH1_in(", i, ", ",j, ") = ", CH1_in(i, j) , filename, iano,diaj,ihora
+		if (CH1_in(i,j) > 15000) then
+            write (16,*) "CH1_in(", i, ",",j, ") =", CH1_in(i, j) , filename, iano,diaj,ihora,"Corregido, vecinos"
+   			CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i,j+1)+CH1_in(i-1,j)+CH1_in(i,j-1))/4.
+        else if (CH1_in(i,j) > 10000) then
+            write (16,*) "CH1_in(", i, ",",j, ") =", CH1_in(i, j) , filename, iano,diaj,ihora,"Corregido"
+   			CH1_in(i,j) = 10000
         end if
-        if (CH1_in(i, j) < -10000 ) then
-            write (16,*) "Pixel malo CH1_oin(", i, ", ",j, ") = ", CH1_in(i, j) , filename, iano,diaj,ihora
+        if (CH1_in(i, j) < -1 ) then
+			write (16,*) "CH1_in(", i, ",", j, ") =", CH1_in(i, j), filename, iano,diaj,ihora,"Pixel malo"
+			CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i,j+1)+CH1_in(i-1,j)+CH1_in(i,j-1))/4.
         end if
     end do
 end do
  
  do i = 1, NX
     do j = 1, NY
-        if (CH4_out(j, i) > 10000) then
-            write (16,*) "CH4_in(", j, ", ", i, ") = ", CH4_in(j, i), filename, iano,diaj,ihora
+		if (CH4_in(i,j) > 15000) then
+            write (16,*) "CH4_in(", i, ",",j, ") =", CH4_in(i, j) , filename, iano,diaj,ihora,"Corregido, vecinos"
+   			CH4_in(i,j) = (CH4_in(i+1,j)+CH4_in(i,j+1)+CH4_in(i-1,j)+CH4_in(i,j-1))/4.
+        else if (CH4_in(i, j) > 10000) then
+            write (16,*) "CH4_in(", i, ",", j, ") =", CH4_in(i, j), filename, iano,diaj,ihora,"Corregido"
+   			CH4_in(i,j) = 10000
         end if
-        if (CH4_out(j, i) < -10000 ) then
-            write (16,*) "Pixel malo CH4_in(", j, ", ", i, ") = ", CH4_in(j, i) , filename, iano,diaj,ihora
+        if (CH4_in(j, i) < -10000 ) then
+			write (16,*) "CH4_in(", i, ",", j, ") =", CH4_in(i, j), filename, iano,diaj,ihora,"Pixel malo"
+			CH4_in(i,j) = (CH4_in(i+1,j)+CH4_in(i,j+1)+CH4_in(i-1,j)+CH4_in(i,j-1))/4.            
         end if
     end do
  end do
  
  ! Guardado de matriz recortada y revisada
- call check( nf90_put_var(ncid,CH4_varid,CH4_in))
+ call check( nf90_put_var(ncid,CH4_varid, CH4_in))
  call check( nf90_put_var(ncid,CH1_varid, CH1_in))
  call check( nf90_close(ncid_in) )
  
@@ -326,19 +336,19 @@ SUBROUTINE diajuliano (day, month, year, dayj)
 
 IMPLICIT NONE
 ! Data dictionary: declare variable types, definitions, & units
-INTEGER, INTENT(IN):: day          !Day (dd)
-INTEGER, INTENT(IN) :: month        !Month (mm)
-INTEGER, INTENT(IN) :: year         !Year (yyyy)
-INTEGER, INTENT(out) :: dayj 		!Day of year
+real, INTENT(IN):: day          !Day (dd)
+real, INTENT(IN) :: month        !Month (mm)
+real, INTENT(IN) :: year         !Year (yyyy)
+real, INTENT(out) :: dayj 		!Day of year
 INTEGER :: i            			!Index,variable
 INTEGER :: leap_day     			!Extra day for leap year
 
 ! Check for leap year, and add extra day if necessary
-IF ( MOD(year,400) == 0 ) THEN
+IF ( MOD(year,400.) == 0 ) THEN
     leap_day = 1    ! Years divisible by 400 are leap years
-ELSE IF ( MOD(year,100) == 0 ) THEN
+ELSE IF ( MOD(year,100.) == 0 ) THEN
     leap_day = 0    ! Other centuries are not leap years
-ELSE IF ( MOD(year,4) == 0 ) THEN
+ELSE IF ( MOD(year,4.) == 0 ) THEN
     leap_day = 1    ! Otherwise every 4th year 1S a leap year
 ELSE
     leap_day = 0    ! Other years are not leap years
@@ -347,7 +357,7 @@ END IF
 
 ! Calculate day of year
 dayj= day
-DO i = 1, month-1
+DO i = 1, nint(month)-1
     ! Add days in months from January to last month
     SELECT CASE (i)
     CASE (1,3,5,7,8,10,12)
