@@ -1,11 +1,13 @@
 ! Copyright (C) 2010, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
 ! Programa para el filtraje y almacenamiento de imagenes satelitales en un archivo mensual.
+! Funciona con horas en UTC.
 
 ! gfortran -c -I/usr/include "%f"
 ! gfortran -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o "%e" "%f"
 ! gfortran -o "%e" "%f" -L/usr/lib  -lnetcdf   ?? de manual...
 
 ! Optimizar subrutina de calculo de elevacion
+! Variable coordinada de lat y long real.
 
 !Canal 1: [1728, 9020]
 !Canal 4: [432, 2255]
@@ -27,6 +29,7 @@
  character (4) :: ano
  character (2) :: mes, cdia, hora, minu
  character (2) :: foto
+ character(8)  :: fecha
  real :: iano, imes, idia, ihora, iminu, imesp=0., diaj, hora_utc
  Integer :: ifoto					! 1:media_hora; 2:south_full
  Real    :: az,el,ha,dec,soldst
@@ -35,6 +38,8 @@
  character (12) :: filename_out
  character (len = 27) :: string
  integer :: i=1,j=1, rec
+ logical :: flag1= .false.
+ integer,dimension(8) :: tiempo, tiempof
  
  ! Variables NETCDF 
  integer :: ncid, ncid_in, dia =31, status
@@ -42,54 +47,67 @@
  integer, parameter :: NX = 526, NY = 432 , NXf = 2101, NYf = 1728 
 
  real :: x(NX), y(NY), xf(NXf), yf(NYf)
- integer, dimension(:,:), allocatable :: CH1_out, CH4_out
+ integer, dimension(:,:), allocatable :: CH1_out, CH4_out   ! Matrices de archivo original
+ integer, dimension(:,:), allocatable :: CH4_in ,  CH1_in        !  Matrices de archivo recortado
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
  integer :: CH1_varid, Ch4_varid
- integer, dimension (432,526) :: CH4_in
- integer, dimension (1728,2101) :: CH1_in
  
  integer :: start(NDIMS_IN), start_fine(NDIMS_IN), count(NDIMS_IN), count_fine(NDIMS_IN), start_hora(1)
  integer :: dimids(NDIMS), dimids_fine(NDIMS)
    
  allocate(CH1_out (9020, 1728)) ! Allocate memory for data.
- allocate(CH4_out (2255,432))!(432, 2255))
+ allocate(CH4_out (2255,432))     ! Lectura de variables de archivo original
+ allocate(CH1_in (NXf,NYf))         ! imagenes invertidas
+ allocate(CH4_in(NX,NY))
 
 !********************************************************** Fin declaracion Variables
  
  print *
  print *, 'Recorte de imagenes NetCDF v 0.1 beta'
- !print *, trim(nf90_inq_libvers())
  print *
+
+ call date_and_time(DATE=fecha, VALUES=tiempo)
  open (unit=16, file='log.txt')
+
  call get_command_argument(1, argument) ! Nombre de archivo lista.txt
- OPEN (unit=8, file=trim(argument), status='old', ACTION='READ', IOSTAT=errorread)  
+ open (unit=8, file=trim(argument), status='old', ACTION='READ', IOSTAT=errorread)  
  If(errorread/=0) then
-	write (*,*) " Error en apertura de archivo con lista de entrada!" 
-	write (16,*) " Error en apertura de archivo con lista de entrada!"
-	go to 999 
+    write (*,*) " Error en apertura de archivo con lista de entrada!" 
+    write (16,*) " Error en apertura de archivo con lista de entrada!"
+    go to 999 
  End If
  
 100 read (8,*, IOSTAT=errorread) filename
  if(errorread == -1) then
-	write (16,*)
-	write (*,*)
-	write (16,*) " Terminado exitoso del procesamiento de imagenes"
-	write (*,*) " Terminado exitoso del procesamiento de imagenes"
+    write (16,*)
+    write (*,*)
+    write (16,*) " Terminado exitoso del procesamiento de imagenes"
+    write (*,*) " Terminado exitoso del procesamiento de imagenes"
+    write (*,*)
+    write (16,*)
+    call date_and_time(DATE=fecha, VALUES=tiempof)
+    write (*,*) "Tiempo procesamiento: ", tiempof (5) - tiempo (5) ,"horas", tiempof (6) - tiempo (6),"min.", &
+					& tiempof (7) - tiempo (7), "sec."
+	write (*,*) ' Archivos procesados: ' , rec	
+	write (16,*) 'Tiempo procesamiento: ',tiempof(5)-tiempo(5),'horas',tiempof(6)-tiempo(6),'min.',&
+			& tiempof(7)-tiempo(7), 'sec.'
+	write (16,*) ' Archivos procesados: ' , rec		
+    close (16)
 	call check( nf90_close(ncid) )
-	call check( nf90_close(ncid_in) )
-	close (16)
-	go to 999
+	
+    go to 999
  End if
 
  if(errorread > 0) then
-	write (16,*) " Error en lectura de nombre de archivo en archivo lista ", filename
-	write (*,*) " Error en lectura de nombre de archivo en archivo lista ", filename
-	call check( nf90_close(ncid) )
-	go to 999
+    write (16,*) " Error en lectura de nombre de archivo en archivo lista ", filename
+    write (*,*) " Error en lectura de nombre de archivo en archivo lista ", filename
+    call check( nf90_close(ncid) )
+    call check( nf90_close(ncid_in) )
+    go to 999
  end if
-
+ 
  string = trim(filename)
  ano=string(1:4)
  mes=string(5:6)
@@ -105,182 +123,162 @@
  ihora = ihora + iminu/60.
 
  If (foto=='media_hora') then
-	ifoto = 1
+    ifoto = 1
  ElseIf (foto=='south_full') then
-	ifoto = 2
+    ifoto = 2
  Else 
-	ifoto = 0
+    ifoto = 0
  End If
- 
- call diajuliano (idia, imes, iano, diaj) 
- call sunae(iano,diaj,ihora, latitud, longitud,az,el,ha,dec,soldst)
+
+ call diajuliano (idia, imes, iano, diaj)   ! entrada de reales en ves de enteros.
+ call sunae(iano,diaj,ihora, latitud, longitud,az,el,ha,dec,soldst)  ! Comp.
 
  if (el < 7.0) then
-  write (*,*) " Imagen ", trim(filename),"    eliminada, nocturna."
-  write (16,*) trim(filename),"    Eliminada, nocturna."
-  goto 100
+    write (*,*) '   ',cdia,'  ', hora,':', minu, " eliminada, nocturna.", trim(filename)
+    write (16,*) trim(filename),"    Eliminada, nocturna."
+    goto 100
  end if
 
  If (imesp /= imes) then
- imesp = imes 
- !*********************************************************************** Definiciones NetCDF
-  !call check( nf90_close(ncid) ) ! Cierra el archivo antes de abrir el nuevo.
-  filename_out = ano//mes// '.nc'
-  write (*,*) filename_out
-  call check( nf90_create(filename_out,NF90_64BIT_OFFSET, ncid) ) !
-  call check( nf90_def_dim(ncid, "x", NX, x_dimid) )  ! Define the dimensions. 
-  call check( nf90_def_dim(ncid, "y", NY, y_dimid) )
-  call check( nf90_def_dim(ncid, "xf", NXf, xf_dimid) )  ! Define the dimensions. 
-  call check( nf90_def_dim(ncid, "yf", NYf, yf_dimid) )
-  call check( nf90_def_dim(ncid, "dia", dia,  dia_dimid) )
-  call check( nf90_def_dim(ncid, "hora", NF90_UNLIMITED, hora_dimid) )
-  call check( nf90_def_var(ncid,"x", NF90_FLOAT, x_dimid, x_varid) )	! Define the coordinate variables
-  call check( nf90_def_var(ncid,"y", NF90_FLOAT, y_dimid, y_varid) )	! 32 bit
-  call check( nf90_def_var(ncid,"xf", NF90_FLOAT, xf_dimid, xf_varid) )	
-  call check( nf90_def_var(ncid,"yf", NF90_FLOAT, yf_dimid, yf_varid) )
-  call check( nf90_def_var(ncid,"hora", NF90_FLOAT, hora_dimid, hora_varid) ) ! 32 bit
-! Assign units attributes to coordinate variables.
-	call check( nf90_put_att(ncid, x_varid, "units", "degrees_north"))
-    call check( nf90_put_att(ncid, y_varid, "units", "degrees_east") )
+    imesp = imes 
+    !*********************************************************************** Definiciones NetCDF
+    If (flag1) then
+		call check( nf90_close(ncid) ) ! Cierra el archivo antes de abrir el nuevo.
+		call date_and_time(VALUES=tiempof)
+		write (*,*) ' Archivos procesados: ' , rec
+		write (*,*) 'Tiempo procesamiento: ',tiempo(5)-tiempof(5),'horas',tiempo(6)-tiempof(6),'min.',&
+		& tiempo(7)-tiempof(7), 'sec.'
+	End if	
+    flag1 = .true.
+    filename_out = ano//mes// '.nc'
+    write (*,*) filename_out
+    write (16,*) filename_out
+    write (16,*)
+    call check( nf90_create(filename_out,NF90_64BIT_OFFSET, ncid) ) ! ncid, archivo de salida recortado
+    ! Dimensiones
+    call check( nf90_def_dim(ncid, "x", NX, x_dimid) )  ! Define the dimensions. 
+    call check( nf90_def_dim(ncid, "y", NY, y_dimid) )
+    call check( nf90_def_dim(ncid, "xf", NXf, xf_dimid) )  ! Define the dimensions. 
+    call check( nf90_def_dim(ncid, "yf", NYf, yf_dimid) )
+    call check( nf90_def_dim(ncid, "dia", dia,  dia_dimid) )
+    call check( nf90_def_dim(ncid, "hora", NF90_UNLIMITED, hora_dimid) )
+    ! Variables
+    call check( nf90_def_var(ncid,"x", NF90_FLOAT, x_dimid, x_varid) )	! Define the coordinate variables
+    call check( nf90_def_var(ncid,"y", NF90_FLOAT, y_dimid, y_varid) )	! 32 bit
+    call check( nf90_def_var(ncid,"xf", NF90_FLOAT, xf_dimid, xf_varid) )	
+    call check( nf90_def_var(ncid,"yf", NF90_FLOAT, yf_dimid, yf_varid) )
+    call check( nf90_def_var(ncid,"hora", NF90_FLOAT, hora_dimid, hora_varid) ) ! 32 bit   
 
-    dimids =  (/ y_dimid, x_dimid, hora_dimid  /) ! The dimids array is used to pass the IDs of the dimensions
-    dimids_fine =  (/ yf_dimid, xf_dimid, hora_dimid /)
-    
+    dimids =  (/ x_dimid, y_dimid, hora_dimid  /) ! The dimids array is used to pass the IDs of the dimensions
+    dimids_fine =  (/ xf_dimid, yf_dimid, hora_dimid /)
+
     call check( nf90_def_var(ncid, "CH1", NF90_SHORT, dimids_fine, CH1_varid) )  ! Define the variable and type. 
     call check( nf90_def_var(ncid, "CH4", NF90_SHORT, dimids, CH4_varid) )		!  NF90_Short (2-byte integer)
-    
-    ! Assign units attributes to the netCDF variables.
+
+    ! Assign units attributes to coordinate variables.
+    call check( nf90_put_att(ncid, x_varid, "units", "degrees_north"))
+    call check( nf90_put_att(ncid, y_varid, "units", "degrees_east") )
+     
+    ! Atributos variables
     call check( nf90_put_att(ncid, CH1_varid, "units", "Albedo*100%") )
     call check( nf90_put_att(ncid, CH1_varid, "missing_value", -32768) )
     call check( nf90_put_att(ncid, CH1_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, CH1_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, CH1_varid, "scale_factor", 0.01) )
-    
-	call check( nf90_put_att(ncid, CH4_varid, "units", "temp_deg_C") )
+
+    call check( nf90_put_att(ncid, CH4_varid, "units", "temp_deg_C") )
     call check( nf90_put_att(ncid, CH4_varid, "missing_value", -32768) )
     call check( nf90_put_att(ncid, CH4_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, CH4_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, CH4_varid, "scale_factor", 0.01) )
-    
+
+    ! Atributos globales    
     call check( nf90_put_att(ncid, NF90_GLOBAL, "imagenes", "media_hora") )
     call check( nf90_put_att(ncid, NF90_GLOBAL, "projection_names", "orthographic") )
     call check( nf90_put_att(ncid, NF90_GLOBAL, "satellite", "goes-13") )
     call check( nf90_put_att(ncid, NF90_GLOBAL, "sensor", 12) )
-	call check( nf90_put_att(ncid, NF90_GLOBAL, "mes", mes) )  
-	call check( nf90_put_att(ncid, NF90_GLOBAL, "ano", ano) )  
-	call check( nf90_put_att(ncid, NF90_GLOBAL, "NX", 526) )  
-	call check( nf90_put_att(ncid, NF90_GLOBAL, "NY", 432) )  
-	call check( nf90_put_att(ncid, NF90_GLOBAL, "NXF", 2101) )
-	call check( nf90_put_att(ncid, NF90_GLOBAL, "NYF", 1728) )
-	call check( nf90_put_att(ncid, NF90_GLOBAL, "Procesadasx", "JPJ") )
-	
-	
-	! End define mode.
-	call check( nf90_enddef(ncid) )
- !*********************************************************************** Fin Definiciones NetCDF	
+    call check( nf90_put_att(ncid, NF90_GLOBAL, "mes", mes) )  
+    call check( nf90_put_att(ncid, NF90_GLOBAL, "ano", ano) )  
+    call check( nf90_put_att(ncid, NF90_GLOBAL, "NX", NX) )  
+    call check( nf90_put_att(ncid, NF90_GLOBAL, "NY", NY) )  
+    call check( nf90_put_att(ncid, NF90_GLOBAL, "NXf", NXf) )
+    call check( nf90_put_att(ncid, NF90_GLOBAL, "NYf", NYf) )
+    call check( nf90_put_att(ncid, NF90_GLOBAL, "Procesadox", "JPJ") )
+    call check( nf90_put_att(ncid, NF90_GLOBAL, "date", fecha) )
+
+    ! End define mode.
+    call check( nf90_enddef(ncid) )
+    !*********************************************************************** Fin Definiciones NetCDF	
    
-   do i = 1, NX 	! Guardar coordenadas de lat y lon.
-	  x(i) = i
-   end do
-   do j = 1, NY
-	  y(j) = j
-   end do	
-   do i = 1, NXf
-	  xf(i) = i
-   end do
-   do j = 1, NYf
-	  yf(j) = j
-   end do	
-   ! Write the coordinate variable data. This will put the latitudes
-   ! and longitudes of our data grid into the netCDF file.
-   call check( nf90_put_var(ncid, x_varid, x) )
-   call check( nf90_put_var(ncid, y_varid, y) )	
-   call check( nf90_put_var(ncid, xf_varid, xf) )
-   call check( nf90_put_var(ncid, yf_varid, yf)	)
-   rec = 0
-	
+    do i = 1, NX 	! Guardar coordenadas de lat y lon.
+        x(i) = i
+    end do
+    do j = 1, NY
+        y(j) = j
+    end do	
+    do i = 1, NXf
+        xf(i) = i
+    end do
+    do j = 1, NYf
+        yf(j) = j
+    end do	
+
+    ! Write the coordinate variable data. This will put the latitudes
+    ! and longitudes of our data grid into the netCDF file.
+    call check( nf90_put_var(ncid, x_varid, x) )
+    call check( nf90_put_var(ncid, y_varid, y) )	
+    call check( nf90_put_var(ncid, xf_varid, xf) )
+    call check( nf90_put_var(ncid, yf_varid, yf) )
+
+    rec = 0
  end if
  
  rec = rec + 1 
  start_hora =(/1/)
  start_hora(1) = rec
- call check( nf90_put_var(ncid, hora_varid, ihora, start_hora) )
- 
-!   ! Entrada temporal de datos.
-!  do j= 1, NX
-!	 do i= 1, NY
-!		CH4_out(i, j) = j + i
-!	 end do
-!  end do
-!	do j = 1, 4*NX
-!	 do i = 1, 4*NY
-!		CH1_out(i, j) = i
-!	 end do
-!	end do
-
-!   write (*,*) "10"
- 
- call check( nf90_open(trim(filename), nf90_nowrite, ncid_in) )
-!~  if(status /= nf90_NoErr) then
-!~ 	write (*,*) " Error en apertura de archivo de lista.  " , filename
-!~ 	write (16,*) " Error en apertura de archivo de lista.  " , filename
-!~ 	go to 999
-!~  End if  
+ call check( nf90_put_var(ncid, hora_varid, ihora, start_hora)  )  ! Graba hora
+ call check( nf90_open(trim(filename), nf90_nowrite, ncid_in) )  ! Abre archivo de lectura, ncid_in
  
  call check( nf90_inq_varid(ncid_in, "gvar_ch1_fine", CH1_in_varid) )
  call check( nf90_inq_varid(ncid_in, "gvar_ch4", CH4_in_varid) )
 
-! Lectura pixel por pixel
-write (*,*) "2"
- 
-! start = (/ 1, 925 /)
-! count = (/ NY, 1450/)
-! start_fine = (/ 1, 3700 /)
-! count_fine = (/ NYf, 5800 /)
- 
-! Do i =1, NY
-!	Do j= 1, NX
-!		start(1) = i
-!		start(2) = j+924
-!		write (*,*) i,j
-!		call check( nf90_get_var(ncid_in, CH4_in_varid, CH4_out))
-!	End do
-! End do	
 		
-   call check( nf90_get_var(ncid_in, CH4_in_varid, CH4_out))
-write (*,*) "3"
-   call check( nf90_get_var(ncid_in, CH1_in_varid, CH1_out))
-write (*,*) "4"
-!! Correccion de datos
-!   do i = 1, NXf
-!	  do j = 1, NYf
-!		 if (CH1_out(j, i) > 10000) then
-!			write (16,*) "CH1_out(", j, ", ", i, ") = ", CH1_out(j, i) , filename, iano,diaj,ihora
-!		 end if
-!		 if (CH1_out(j, i) < -10000 ) then
-!			write (16,*) "Pixel malo CH1_out(", j, ", ", i, ") = ", CH1_out(j, i) , filename, iano,diaj,ihora
-!		 end if
-!	  end do
-!   end do
+ call check( nf90_get_var(ncid_in, CH4_in_varid, CH4_out)) 
+ call check( nf90_get_var(ncid_in, CH1_in_varid, CH1_out))  
  
-   do i = 1, NX
-	  do j = 1, NY
-		 if (CH4_out(j, i) > 10000) then
-			write (16,*) "CH4_out(", j, ", ", i, ") = ", CH4_out(j, i), filename, iano,diaj,ihora
-		 end if
-		 if (CH4_out(j, i) < -10000 ) then
-			write (16,*) "Pixel malo CH4_out(", j, ", ", i, ") = ", CH4_out(j, i) , filename, iano,diaj,ihora
-		 end if
-	  end do
-   end do
-   ! Close the file, freeing all resources.
- !  call check( nf90_close(ncid) )
- CH4_in = CH4_out(:,925:1450)
- write (*,*) "5"
- CH1_in = CH1_out(:,3700:5800)
+ ! Recorte de imagenes
+ CH4_in = CH4_out(925:1450,:)
+ CH1_in = CH1_out(3700:5800,:)
+ 
+ ! Correccion de datos      ! Revisar hacia abajo o hacia al lado ??
+ do i = 1, NXf
+    do j = 1, NYf
+        if (CH1_in(i,j) > 10000) then
+            write (16,*) "CH1_in(", i, ", ",j, ") = ", CH1_in(i, j) , filename, iano,diaj,ihora
+        end if
+        if (CH1_in(i, j) < -10000 ) then
+            write (16,*) "Pixel malo CH1_oin(", i, ", ",j, ") = ", CH1_in(i, j) , filename, iano,diaj,ihora
+        end if
+    end do
+end do
+ 
+ do i = 1, NX
+    do j = 1, NY
+        if (CH4_out(j, i) > 10000) then
+            write (16,*) "CH4_in(", j, ", ", i, ") = ", CH4_in(j, i), filename, iano,diaj,ihora
+        end if
+        if (CH4_out(j, i) < -10000 ) then
+            write (16,*) "Pixel malo CH4_in(", j, ", ", i, ") = ", CH4_in(j, i) , filename, iano,diaj,ihora
+        end if
+    end do
+ end do
+ 
+ ! Guardado de matriz recortada y revisada
  call check( nf90_put_var(ncid,CH4_varid,CH4_in))
  call check( nf90_put_var(ncid,CH1_varid, CH1_in))
  call check( nf90_close(ncid_in) )
+ 
+ write (*,*) '   ',cdia,'  ', hora,':', minu
  
  Go to 100
  
@@ -324,9 +322,7 @@ END FUNCTION norm_hora
 
 
 SUBROUTINE diajuliano (day, month, year, dayj)   
-!This program calculates the day of year corresponding to a
-!specified date. It illustrates the use of counting loops
-!and the SELECT CASE construct.
+!This program calculates the day of year corresponding to a specified date.
 
 IMPLICIT NONE
 ! Data dictionary: declare variable types, definitions, & units
