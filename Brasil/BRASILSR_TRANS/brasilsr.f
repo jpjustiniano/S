@@ -39,7 +39,7 @@ C     NC     : number of cells in longitude direction
 !  XTCD=TCLOUD
 
 !SUBROUTINE 
-! TRANSMIT 	: estimates global radiation in cloudy and clear-sky atmospheres
+! TRANSMIT 	: Correccion de visivilidad y pasa a D2TR.
 !  D2STR	: calculate transmittance for clear and cloudy sky
 !   ASTRO	: calculate eccentricity correction, declination e equation of time
 !   ATMOSPHERE	: choose atmosphere index (standard atmosphere as function of temperature)
@@ -282,4 +282,4 @@ C   Mensagens de erro de leitura
  1115 PRINT*, 'Erro de leitura do arquivo de temperatura'
       STOP
       END
-
+Correccion de visivilidad y pasa a D2TR.
