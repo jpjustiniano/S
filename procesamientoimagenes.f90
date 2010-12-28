@@ -7,6 +7,8 @@
 ! gfortran -o "%e" "%f" -L/usr/lib  -lnetcdf   ?? de manual...
 
 ! Variable coordinada de lat y long real.
+! Coordinar las variables de entrada en las mismas coordenadas
+! Procesamiento de solo Chile. Eliminar fuera de fronteras.
 
 !Canal 1: [1728, 9020]
 !Canal 4: [432, 2255]
