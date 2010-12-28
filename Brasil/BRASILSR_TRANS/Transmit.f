@@ -90,9 +90,6 @@ C
      &           TAUW,TRANS,TDIR)
 C
 C......................................................................
-C
-c      write(*,*) JDAY,XLON,YLAT,TSTAT,SFALB,RFSURF,ZSTAT,SSIW,IT,ICLOUD,
-c     & TAUW,TRANS
 
       RETURN
       END

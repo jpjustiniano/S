@@ -24,13 +24,20 @@ C     SSIW   : visibility                    (km)
 C     NL     : number of cells in latitude direction
 C     NC     : number of cells in longitude direction
 
-! imagen	: Archivo temporal de lectura de datos
-! XLAT		: Latitudes
-! XLON		: Longitudes 
-! XALT		: Alturas (m)
-! XALB		: Albedo (%)
-! XUMI		: HR (%)
-! XTEM		: Temp (K)
+!INPUTS
+!  imagen	: Archivo temporal de lectura de datos
+!  XLAT		: Latitudes
+!  XLON		: Longitudes 
+!  XALT		: Alturas (m)
+!  XALB		: Albedo (%)
+!  XUMI		: HR (%)
+!  XTEM		: Temp (K)
+
+!OUTPUTS
+!  XTCR=TCLEAR
+!  XTDIR=TDIR
+!  XTCD=TCLOUD
+
 !SUBROUTINE 
 ! TRANSMIT 	: estimates global radiation in cloudy and clear-sky atmospheres
 !  D2STR	: calculate transmittance for clear and cloudy sky
@@ -39,6 +46,8 @@ C     NC     : number of cells in longitude direction
 !   STRPSRB	: calculate transmittance for clear and cloudy sky
 ! 
 !**************************************************************************
+SUBROUTINE TRANSMIT(JDAY,XLON,YLAT,TSTAT,SFALB,
+     &                    RFSURF,ZSTAT,SSIW,XHOR,ICLOUD,TAUW,TRANS,TDIR)
 
       IF(XUMI(I,J)*100.0.GT.-98.0) THEN
 	SSIW=XVIS(I,J)
