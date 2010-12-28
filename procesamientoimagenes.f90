@@ -6,7 +6,6 @@
 ! gfortran -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o "%e" "%f"
 ! gfortran -o "%e" "%f" -L/usr/lib  -lnetcdf   ?? de manual...
 
-! Optimizar subrutina de calculo de elevacion
 ! Variable coordinada de lat y long real.
 
 !Canal 1: [1728, 9020]
@@ -48,24 +47,34 @@
 
  real :: x(NX), y(NY), xf(NXf), yf(NYf)
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out   ! Matrices de archivo original
- integer, dimension(:,:), allocatable :: CH4_in ,  CH1_in        !  Matrices de archivo recortado
+ integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
+ integer, dimension(:,:), allocatable :: CH1_max, CH1_min, CH4_max,CH4_min  !  Matrices max min
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
  integer :: CH1_varid, Ch4_varid
+ integer :: CH1_max_varid, CH1_min_varid, CH4_max_varid, CH4_min_varid
  
  integer :: start(NDIMS_IN), start_fine(NDIMS_IN), count(NDIMS_IN), count_fine(NDIMS_IN), start_hora(1)
- integer :: dimids(NDIMS), dimids_fine(NDIMS)
+ integer :: dimids(NDIMS), dimids_fine(NDIMS), dimids2d(NDIMS_IN)
    
- allocate(CH1_out (9020, 1728)) ! Allocate memory for data.
+ allocate(CH1_out (9020, 1728))   ! Allocate memory for data.
  allocate(CH4_out (2255,432))     ! Lectura de variables de archivo original
- allocate(CH1_in (NXf,NYf))         ! imagenes invertidas
+ allocate(CH1_in (NXf,NYf))       ! imagenes invertidas
  allocate(CH4_in(NX,NY))
-
+ 
+ allocate(CH1_max(NX,NY))
+ allocate(CH1_min(NX,NY))
+ allocate(CH4_max(NX,NY))
+ allocate(CH4_min(NX,NY))
+ CH1_max = 0
+ CH1_min = 10000
+ CH4_max = 0
+ CH4_min = 10000 
 !********************************************************** Fin declaracion Variables
  
  print *
- print *, 'Recorte de imagenes NetCDF v 0.1 beta'
+ print *, 'Recorte de imagenes NetCDF v 0.1'
  print *
 
  call date_and_time(DATE=fecha, VALUES=tiempo)
@@ -95,6 +104,12 @@
 			& tiempof(7)-tiempo(7), 'sec.'
 	write (16,*) ' Archivos procesados: ' , rec		
     close (16)
+    
+    call check( nf90_put_var(ncid, CH1_max_varid, CH1_max) )
+    call check( nf90_put_var(ncid, CH1_min_varid, CH1_min) )
+    call check( nf90_put_var(ncid, CH4_max_varid, CH4_max) )
+    call check( nf90_put_var(ncid, CH4_min_varid, CH4_min) )
+        
 	call check( nf90_close(ncid) )
 	
     go to 999
@@ -171,9 +186,14 @@
 
     dimids =  (/ x_dimid, y_dimid, hora_dimid  /) ! The dimids array is used to pass the IDs of the dimensions
     dimids_fine =  (/ xf_dimid, yf_dimid, hora_dimid /)
-
+	dimids2d =  (/ x_dimid, y_dimid/)
+	
     call check( nf90_def_var(ncid, "CH1", NF90_SHORT, dimids_fine, CH1_varid) )  ! Define the variable and type. 
     call check( nf90_def_var(ncid, "CH4", NF90_SHORT, dimids, CH4_varid) )		!  NF90_Short (2-byte integer)
+    call check( nf90_def_var(ncid, "CH1_max", NF90_SHORT, dimids2d, CH1_max_varid) )
+    call check( nf90_def_var(ncid, "CH1_min", NF90_SHORT, dimids2d, CH1_min_varid) )
+    call check( nf90_def_var(ncid, "CH4_max", NF90_SHORT, dimids2d, CH4_max_varid) )
+    call check( nf90_def_var(ncid, "CH4_min", NF90_SHORT, dimids2d, CH4_min_varid) )
 
     ! Assign units attributes to coordinate variables.
     call check( nf90_put_att(ncid, x_varid, "units", "degrees_north"))
@@ -253,6 +273,12 @@
  ! Correccion de datos      ! Revisar hacia abajo o hacia al lado ??
  do i = 1, NXf
     do j = 1, NYf
+		if (CH1_in(i,j) > CH1_max(i,j)) then
+			CH1_max(i,j) = CH1_in(i,j)
+		end if
+		if (CH1_in(i,j) < CH1_min(i,j)) then
+			CH1_min(i,j) = CH1_in(i,j)
+		end if
 		if (CH1_in(i,j) > 15000) then
             write (16,*) "CH1_in(", i, ",",j, ") =", CH1_in(i, j) , filename, iano,diaj,ihora,"Corregido, vecinos"
    			CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i,j+1)+CH1_in(i-1,j)+CH1_in(i,j-1))/4.
@@ -260,15 +286,26 @@
             write (16,*) "CH1_in(", i, ",",j, ") =", CH1_in(i, j) , filename, iano,diaj,ihora,"Corregido"
    			CH1_in(i,j) = 10000
         end if
-        if (CH1_in(i, j) < -1 ) then
+        if (CH1_in(i, j) < 0 ) then
 			write (16,*) "CH1_in(", i, ",", j, ") =", CH1_in(i, j), filename, iano,diaj,ihora,"Pixel malo"
-			CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i,j+1)+CH1_in(i-1,j)+CH1_in(i,j-1))/4.
+			
+			If (CH1_in(i+1,j) > 0 .and. CH1_in(i,j+1) > 0 .and. CH1_in(i-1,j) > 0 .and. CH1_in(i,j-1) > 0) Then
+				CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i,j+1)+CH1_in(i-1,j)+CH1_in(i,j-1))/4.        
+			Else
+				CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i-1,j))/2.
+			End If
         end if
     end do
 end do
  
  do i = 1, NX
     do j = 1, NY
+		if (CH4_in(i,j) > CH4_max(i,j)) then
+			CH4_max(i,j) = CH4_in(i,j)
+		end if
+		if (CH4_in(i,j) < CH4_min(i,j)) then
+			CH4_min(i,j) = CH4_in(i,j)
+		end if    
 		if (CH4_in(i,j) > 15000) then
             write (16,*) "CH4_in(", i, ",",j, ") =", CH4_in(i, j) , filename, iano,diaj,ihora,"Corregido, vecinos"
    			CH4_in(i,j) = (CH4_in(i+1,j)+CH4_in(i,j+1)+CH4_in(i-1,j)+CH4_in(i,j-1))/4.
@@ -278,7 +315,11 @@ end do
         end if
         if (CH4_in(j, i) < -10000 ) then
 			write (16,*) "CH4_in(", i, ",", j, ") =", CH4_in(i, j), filename, iano,diaj,ihora,"Pixel malo"
-			CH4_in(i,j) = (CH4_in(i+1,j)+CH4_in(i,j+1)+CH4_in(i-1,j)+CH4_in(i,j-1))/4.            
+			If (CH4_in(i+1,j) > -10000 .and. CH4_in(i,j+1) > -10000 .and. CH4_in(i-1,j) > -10000 .and. CH4_in(i,j-1)> -10000) Then
+				CH4_in(i,j) = (CH4_in(i+1,j)+CH4_in(i,j+1)+CH4_in(i-1,j)+CH4_in(i,j-1))/4.        
+			Else
+				CH4_in(i,j) = (CH4_in(i+1,j)+CH4_in(i-1,j))/2.
+			End If
         end if
     end do
  end do
@@ -454,14 +495,14 @@ data twopi,pi,rad/6.2831853,3.1415927,.017453293/
 
 !   calculate azimuth and elevation
       el=asin(sin(dec)*sin(lat)+cos(dec)*cos(lat)*cos(ha))
-      az=asin(-cos(dec)*sin(ha)/cos(el))
+!      az=asin(-cos(dec)*sin(ha)/cos(el))
 
-!   this puts azimuth between 0 and 2*pi radians
-      if(sin(dec)-sin(el)*sin(lat).ge.0.) then
-		if(sin(az).lt.0.) az=az+twopi
-      else
-      az=pi-az
-      endif
+!!   this puts azimuth between 0 and 2*pi radians
+!      if(sin(dec)-sin(el)*sin(lat).ge.0.) then
+!		if(sin(az).lt.0.) az=az+twopi
+!      else
+!      az=pi-az
+!      endif
 !   if az=90 degs, elcritical=asin(sin(dec)/sin(lat))
 !    elc=asin(sin(dec)/sin(lat))
 !    if(el.ge.elc)az=pi-az
@@ -483,17 +524,17 @@ data twopi,pi,rad/6.2831853,3.1415927,.017453293/
 !   note that 3.51823=1013.25 mb/288 C
       el=el+refrac
 !   elevation in degs
-!
-!   calculate distance to sun in A.U. & diameter in degs
-      soldst=1.00014-.01671*cos(mnanom)-.00014*cos(2.*mnanom)
-      soldia=.5332/soldst
+!!
+!!   calculate distance to sun in A.U. & diameter in degs
+!      soldst=1.00014-.01671*cos(mnanom)-.00014*cos(2.*mnanom)
+!      soldia=.5332/soldst
 
-!   convert az and lat to degs before returning
-      az=az/rad
-      lat=lat/rad
-	 ha=ha/rad
-	 dec=dec/rad
+!!   convert az and lat to degs before returning
+!      az=az/rad
+!      lat=lat/rad
+!	 ha=ha/rad
+!	 dec=dec/rad
 
-!   mnlong in degs, gmst in hours, jd in days if 2.4e6 added;
-!   mnanom,eclong,oblqec,ra,and lmst in radians
+!!   mnlong in degs, gmst in hours, jd in days if 2.4e6 added;
+!!   mnanom,eclong,oblqec,ra,and lmst in radians
  End subroutine
