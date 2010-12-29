@@ -31,14 +31,14 @@
  character (2) :: mes, cdia, hora, minu
  character (2) :: foto
  character(8)  :: fecha
- real :: iano, imes, idia, ihora, iminu, imesp=0., diaj, hora_utc
+ real :: iano, imes, idia, ihora, ihorat, iminu, imesp=0., diaj, hora_utc
  Integer :: ifoto					! 1:media_hora; 2:south_full
  Real    :: az,el,ha,dec,soldst
  character (30) :: argument  ! Nombre de archivo de lista
  character (30) :: filename  ! Nombres dentro de la lista
  character (12) :: filename_out
  character (len = 27) :: string
- integer :: i=1,j=1, rec
+ integer :: i=1,j=1, rec=1, noct= 0
  logical :: flag1= .false.
  integer,dimension(8) :: tiempo, tiempof
  
@@ -65,7 +65,7 @@
  allocate(CH1_in (NXf,NYf))       ! imagenes invertidas
  allocate(CH4_in(NX,NY))
  
- allocate(CH1_max(NX,NY))
+ allocate(CH1_max(NXf,NYf))
  allocate(CH1_min(NX,NY))
  allocate(CH4_max(NX,NY))
  allocate(CH4_min(NX,NY))
@@ -88,7 +88,7 @@
     write (*,*) " Error en apertura de archivo con lista de entrada!" 
     write (16,*) " Error en apertura de archivo con lista de entrada!"
     go to 999 
- End If
+ End IfCH1_in
  
 100 read (8,*, IOSTAT=errorread) filename
  if(errorread == -1) then
@@ -153,6 +153,7 @@
  if (el < 7.0) then
     write (*,*) '   ',cdia,'  ', hora,':', minu, " eliminada, nocturna. "
     write (16,*) '                                   ', trim(filename),"   Eliminada, nocturna. "
+    noct = noct +1
     goto 100
  end if
 
@@ -162,8 +163,9 @@
     If (flag1) then
 		call check( nf90_close(ncid) ) ! Cierra el archivo antes de abrir el nuevo.
 		call date_and_time(VALUES=tiempof)
-		write (*,*) ' Archivos procesados: ' , rec
-		write (*,*) 'Tiempo procesamiento: ',tiempo(5)-tiempof(5),'horas',tiempo(6)-tiempof(6),'min.',&
+		write (*,*) '    Archivos procesados : ' , rec
+		write (*,*) ' Archivos no procesados : ' , noct, '  (nocturnos)'
+		write (*,*) '   Tiempo procesamiento : ',tiempo(5)-tiempof(5),'horas',tiempo(6)-tiempof(6),'min.',&
 		& tiempo(7)-tiempof(7), 'sec.'
 	End if	
     flag1 = .true.
@@ -180,11 +182,11 @@
     call check( nf90_def_dim(ncid, "dia", dia,  dia_dimid) )
     call check( nf90_def_dim(ncid, "hora", NF90_UNLIMITED, hora_dimid) )
     ! Variables
-    call check( nf90_def_var(ncid,"x", NF90_FLOAT, x_dimid, x_varid) )	! Define the coordinate variables
-    call check( nf90_def_var(ncid,"y", NF90_FLOAT, y_dimid, y_varid) )	! 32 bit
-    call check( nf90_def_var(ncid,"xf", NF90_FLOAT, xf_dimid, xf_varid) )	
-    call check( nf90_def_var(ncid,"yf", NF90_FLOAT, yf_dimid, yf_varid) )
-    call check( nf90_def_var(ncid,"hora", NF90_FLOAT, hora_dimid, hora_varid) ) ! 32 bit   
+    call check( nf90_def_var(ncid,"x", NF90_SHORT, x_dimid, x_varid) )	! Define the coordinate variables
+    call check( nf90_def_var(ncid,"y", NF90_SHORT, y_dimid, y_varid) )	! 32 bit
+    call check( nf90_def_var(ncid,"xf", NF90_SHORT, xf_dimid, xf_varid) )	
+    call check( nf90_def_var(ncid,"yf", NF90_SHORT, yf_dimid, yf_varid) )
+    call check( nf90_def_var(ncid,"hora", NF90_SHORT, hora_dimid, hora_varid) ) ! 32 bit   
 
     dimids =  (/ x_dimid, y_dimid, hora_dimid  /) ! The dimids array is used to pass the IDs of the dimensions
     dimids_fine =  (/ xf_dimid, yf_dimid, hora_dimid /)
@@ -232,17 +234,22 @@
     call check( nf90_enddef(ncid) )
     !*********************************************************************** Fin Definiciones NetCDF	
    
+   x(1) = 65.
+   y(1) = 20. 
+   xf(1) = x(1)
+   yf(1) = y(1)
+
     do i = 1, NX 	! Guardar coordenadas de lat y lon.
-        x(i) = i
+        x(i) =  x(i) + 0.02
     end do
     do j = 1, NY
-        y(j) = j
+        y(j) = y(j) + 0.13
     end do	
     do i = 1, NXf
-        xf(i) = i
+        xf(i) = xf(i) + 0.005
     end do
     do j = 1, NYf
-        yf(j) = j
+        yf(j) = yf(j) + 0.0325
     end do	
 
     ! Write the coordinate variable data. This will put the latitudes
@@ -253,12 +260,15 @@
     call check( nf90_put_var(ncid, yf_varid, yf) )
 
     rec = 0
+    noct= 0
+    
  end if
  
  rec = rec + 1 
  start_hora =(/1/)
  start_hora(1) = rec
- call check( nf90_put_var(ncid, hora_varid, ihora, start_hora)  )  ! Graba hora
+ ihorat = ihora + idia*24.
+ call check( nf90_put_var(ncid, hora_varid, ihorat, start_hora)  )  ! Graba hora
  call check( nf90_open(trim(filename), nf90_nowrite, ncid_in) )  ! Abre archivo de lectura, ncid_in
  
  call check( nf90_inq_varid(ncid_in, "gvar_ch1_fine", CH1_in_varid) )
