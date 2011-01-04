@@ -128,6 +128,7 @@ C
       IF (ICLOUD .GT. 0) THEN
       LCLOUD = .TRUE.
       ENDIF
+      print *, '1'
 C
 C......................................................................
 C
@@ -136,7 +137,8 @@ C     input  - LATMOS,VIS,INDEX
 C     output - NLEV,SOL,DZ,PRESS,ALT,TEMP,ROL,ROH,RO3,SCA,RAY
 C
       CALL LESEN(LATMOS,VIS,INDEX,NLEV,SOL,DZ,PRESS,ALT,TEMP,ROL,ROH,
-     & RO3,SCA,RAY)                         
+     & RO3,SCA,RAY)          
+      print *, '2'               
 C
 C     MODIFICACOES SUGERIDAS PELO FERNANDO PARA PREVER A AGUA PRECIPITAVEL 
 C     A DIFERENTES ALTITUDES
@@ -148,20 +150,20 @@ C
       PSTAT = 1013.25*EXP(-0.0001184*ZSTAT)
       PVSAT = EXP(26.23 - 5416.0/TSTAT)/100.0
       WMIXRAT=0.622*RF*PVSAT/1013.25
-      XM=(1.0-0.26*WMIXRAT)*XD
-      TNEW=TSTAT*((PSTAT/1013.25)**XM)
+      XM=(1.0-0.26*WMIXRAT)*XD              !4
+      TNEW=TSTAT*((PSTAT/1013.25)**XM)      !3
 C     WRITE(*,*) 'tnew=',TNEW,'tstat=',TSTAT,'dalt=',dalt
-      PVSAT = EXP(26.23 - 5416.0/TNEW)
-      WH2O  = 0.493*RF*PVSAT/TNEW
+      PVSAT = EXP(26.23 - 5416.0/TNEW)      !2
+      WH2O  = 0.493*RF*PVSAT/TNEW           !1
 C
 C     test for precitable water less than 0.0000001 cm
 C
-      IF (WH2O .LE.0.0000001) THEN
+      IF (WH2O .LE. 0.0000001) THEN
       WRITE (*,*)'NEGATIVE PRECIPITABLE WATER VAPOR',WH2O,
      & ' IS SET TO 0.000001 (cm)',TSTAT,ZSTAT
-      READ(*,*)
       WH2O  = 0.0000001
       ENDIF
+      print *, '3'
 C
 C     TERMINO DAS MODIFICACOES
 C
@@ -182,6 +184,7 @@ C     output - NCL,IGO,TAUW,TW,K1
 C
       CALL WOLKE1(NCL,NLAY,IGO,TOP,TAUW,IWP,LCLOUD,CLOLWC,
      &   DZ,TEMP,PRESS,TW,K1)
+      print *, '4'
 C
 C......................................................................
 C
@@ -209,6 +212,7 @@ C     subroutine VARIA - changes atmospheric profiles
 C     input  - RAY,NCL,NLAY,TS,ROFF,WH2O,K1,LCLOUD,DZ,TEMP,PRESS,ROL,ROH,RO3
 C     output - TEMP,ROH,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM
 C     
+      print *, '5'
       CALL VARIA(RAY,NCL,NLAY,TS,ROFF,WH2O,K1,LCLOUD,DZ,TEMP,PRESS,ROL,
      &           ROH,RO3,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM)
 C
@@ -218,6 +222,7 @@ C     subroutine AERO - determination of aerosol profiles
 C     input  - SCA,NLAY,DZ,ALT
 C     output - INAERO,ASIG
 C
+      print *, '6'
       CALL AERO(SCA,NLAY,DZ,ALT,INAERO,ASIG)
 C
 C......................................................................
@@ -226,6 +231,7 @@ C     subroutine ATMOS - determination of absorption and scattering
 C     input  - NLAY,INDEX,DZ,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM
 C     output - U,V
 C
+      print *, '7'
       CALL ATMOS(NLAY,INDEX,DZ,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM,U,V)
 C
 C......................................................................
@@ -247,6 +253,7 @@ C
 C
 C.....loop spectral intervals..........................................
 C
+      print *, '8'
       IBEG = INTVA(INTVAL)
       ISTO = INTVE(INTVAL)
       IF(IBEG.EQ.0.AND.ISTO.EQ.0) GOTO 100

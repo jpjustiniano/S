@@ -34,6 +34,7 @@ C     NC     : number of cells in longitude direction
 !  XTEM		: Temp (K)
 
 !OUTPUTS
+!  TRANS  : parameterized sky transmittance for broadband solar radiation in the atmosphere 
 !  XTCR=TCLEAR
 !  XTDIR=TDIR
 !  XTCD=TCLOUD
@@ -244,11 +245,11 @@ C
        CALL TRANSMIT(NDIACAR,XLON(I,J),XLAT(I,J),XTEM(I,J),XALB(I,J),
      &  XUMI(I,J),XALT(I,J),SSIW,XHOR,1,100.0D0,TCLOUD,TDIR)
        XTCD=TCLOUD
-      ELSE
-       XTCR=-1.0
-       XTCD=-1.0
-       XTDIR=-1.0
-      ENDIF
+ELSE
+XTCR=-1.0
+XTCD=-1.0
+XTDIR=-1.0
+ENDIF
       WRITE(18,1005) XLON(I,J),XLAT(I,J),XTCR,XTCD,XTDIR
 
       END DO !235

@@ -50,7 +50,7 @@
  real :: x(NX), y(NY), xf(NXf), yf(NYf)
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out   ! Matrices de archivo original
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
- integer, dimension(:,:), allocatable :: CH1_max, CH1_min, CH4_max,CH4_min  !  Matrices max min
+ real, dimension(:,:), allocatable :: CH1_max, CH1_min, CH4_max,CH4_min  !  Matrices max min
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
@@ -58,7 +58,7 @@
  integer :: CH1_max_varid, CH1_min_varid, CH4_max_varid, CH4_min_varid
  
  integer :: start(NDIMS_IN), start_fine(NDIMS_IN), count(NDIMS_IN), count_fine(NDIMS_IN), start_hora(1)
- integer :: dimids(NDIMS), dimids_fine(NDIMS), dimids2d(NDIMS_IN)
+ integer :: dimids(NDIMS), dimids_fine(NDIMS), dimids2d(NDIMS_IN), dimids2df(NDIMS_IN)
    
  allocate(CH1_out (9020, 1728))   ! Allocate memory for data.
  allocate(CH4_out (2255,432))     ! Lectura de variables de archivo original
@@ -66,7 +66,7 @@
  allocate(CH4_in(NX,NY))
  
  allocate(CH1_max(NXf,NYf))
- allocate(CH1_min(NX,NY))
+ allocate(CH1_min(NXf,NYf))
  allocate(CH4_max(NX,NY))
  allocate(CH4_min(NX,NY))
  CH1_max = 0
@@ -76,7 +76,8 @@
 !********************************************************** Fin declaracion Variables
  
  print *
- print *, 'Recorte de imagenes NetCDF v 0.1'
+ print *, '                        Recorte de imagenes NetCDF v 0.1'
+ print *, '                        *********************************'
  print *
 
  call date_and_time(DATE=fecha, VALUES=tiempo)
@@ -88,7 +89,7 @@
     write (*,*) " Error en apertura de archivo con lista de entrada!" 
     write (16,*) " Error en apertura de archivo con lista de entrada!"
     go to 999 
- End IfCH1_in
+ End If
  
 100 read (8,*, IOSTAT=errorread) filename
  if(errorread == -1) then
@@ -99,9 +100,11 @@
     write (*,*)
     write (16,*)
     call date_and_time(DATE=fecha, VALUES=tiempof)
-    write (*,*) "Tiempo procesamiento: ", tiempof (5) - tiempo (5) ,"horas", tiempof (6) - tiempo (6),"min.", &
+    write (*,*) '   Tiempo procesamiento: ', tiempof (5) - tiempo (5) ,"horas", tiempof (6) - tiempo (6),"min.", &
 					& tiempof (7) - tiempo (7), "sec."
-	write (*,*) ' Archivos procesados: ' , rec	
+	write (*,*) '    Archivos procesados: ' , rec	
+	write (*,*) ' Archivos no procesados: ' , noct, '  (nocturnos)'
+	write (*,*)
 	write (16,*) 'Tiempo procesamiento: ',tiempof(5)-tiempo(5),'horas',tiempof(6)-tiempo(6),'min.',&
 			& tiempof(7)-tiempo(7), 'sec.'
 	write (16,*) ' Archivos procesados: ' , rec		
@@ -139,7 +142,7 @@
  READ (minu,'(F2.0)') iminu
  ihora = ihora + iminu/60.
 
- If (foto=='media_hora') then
+ If (foto=='media_hora') then ! no funciona
     ifoto = 1
  ElseIf (foto=='south_full') then
     ifoto = 2
@@ -169,11 +172,17 @@
 		& tiempo(7)-tiempof(7), 'sec.'
 	End if	
     flag1 = .true.
-    filename_out = ano//mes// '.nc'
+    
+    If (imes < 10 ) then
+		filename_out = ano//'0'//mes//'.nc'
+	Else
+		filename_out = ano//mes//'.nc'
+	End if
     write (*,*) filename_out
     write (16,*) filename_out
     write (16,*)
     call check( nf90_create(filename_out,NF90_64BIT_OFFSET, ncid) ) ! ncid, archivo de salida recortado
+    
     ! Dimensiones
     call check( nf90_def_dim(ncid, "x", NX, x_dimid) )  ! Define the dimensions. 
     call check( nf90_def_dim(ncid, "y", NY, y_dimid) )
@@ -186,16 +195,17 @@
     call check( nf90_def_var(ncid,"y", NF90_SHORT, y_dimid, y_varid) )	! 32 bit
     call check( nf90_def_var(ncid,"xf", NF90_SHORT, xf_dimid, xf_varid) )	
     call check( nf90_def_var(ncid,"yf", NF90_SHORT, yf_dimid, yf_varid) )
-    call check( nf90_def_var(ncid,"hora", NF90_SHORT, hora_dimid, hora_varid) ) ! 32 bit   
+    call check( nf90_def_var(ncid,"hora", NF90_FLOAT, hora_dimid, hora_varid) ) ! 32 bit   
 
     dimids =  (/ x_dimid, y_dimid, hora_dimid  /) ! The dimids array is used to pass the IDs of the dimensions
     dimids_fine =  (/ xf_dimid, yf_dimid, hora_dimid /)
 	dimids2d =  (/ x_dimid, y_dimid/)
+	dimids2df =  (/ xf_dimid, yf_dimid/)
 	
     call check( nf90_def_var(ncid, "CH1", NF90_SHORT, dimids_fine, CH1_varid) )  ! Define the variable and type. 
     call check( nf90_def_var(ncid, "CH4", NF90_SHORT, dimids, CH4_varid) )		!  NF90_Short (2-byte integer)
-    call check( nf90_def_var(ncid, "CH1_max", NF90_SHORT, dimids2d, CH1_max_varid) )
-    call check( nf90_def_var(ncid, "CH1_min", NF90_SHORT, dimids2d, CH1_min_varid) )
+    call check( nf90_def_var(ncid, "CH1_max", NF90_SHORT, dimids2df, CH1_max_varid) )
+    call check( nf90_def_var(ncid, "CH1_min", NF90_SHORT, dimids2df, CH1_min_varid) )
     call check( nf90_def_var(ncid, "CH4_max", NF90_SHORT, dimids2d, CH4_max_varid) )
     call check( nf90_def_var(ncid, "CH4_min", NF90_SHORT, dimids2d, CH4_min_varid) )
 
@@ -221,8 +231,8 @@
     call check( nf90_put_att(ncid, NF90_GLOBAL, "projection_names", "orthographic") )
     call check( nf90_put_att(ncid, NF90_GLOBAL, "satellite", "goes-13") )
     call check( nf90_put_att(ncid, NF90_GLOBAL, "sensor", 12) )
-    call check( nf90_put_att(ncid, NF90_GLOBAL, "mes", mes) )  
-    call check( nf90_put_att(ncid, NF90_GLOBAL, "ano", ano) )  
+    call check( nf90_put_att(ncid, NF90_GLOBAL, "mes", imes) )  
+    call check( nf90_put_att(ncid, NF90_GLOBAL, "ano", iano) )  
     call check( nf90_put_att(ncid, NF90_GLOBAL, "NX", NX) )  
     call check( nf90_put_att(ncid, NF90_GLOBAL, "NY", NY) )  
     call check( nf90_put_att(ncid, NF90_GLOBAL, "NXf", NXf) )
@@ -239,17 +249,17 @@
    xf(1) = x(1)
    yf(1) = y(1)
 
-    do i = 1, NX 	! Guardar coordenadas de lat y lon.
-        x(i) =  x(i) + 0.02
+    do i = 2, NX 	! Guardar coordenadas de lat y lon.
+        x(i) =  x(i-1) + 0.02
     end do
-    do j = 1, NY
-        y(j) = y(j) + 0.13
+    do j = 2, NY
+        y(j) = y(j-1) + 0.13
     end do	
-    do i = 1, NXf
-        xf(i) = xf(i) + 0.005
+    do i = 2, NXf
+        xf(i) = xf(i-1) + 0.005
     end do
-    do j = 1, NYf
-        yf(j) = yf(j) + 0.0325
+    do j = 2, NYf
+        yf(j) = yf(j-1) + 0.0325
     end do	
 
     ! Write the coordinate variable data. This will put the latitudes
@@ -267,7 +277,7 @@
  rec = rec + 1 
  start_hora =(/1/)
  start_hora(1) = rec
- ihorat = ihora + idia*24.
+ ihorat = (ihora + idia*24)  ! Hora (hr_mes*100)
  call check( nf90_put_var(ncid, hora_varid, ihorat, start_hora)  )  ! Graba hora
  call check( nf90_open(trim(filename), nf90_nowrite, ncid_in) )  ! Abre archivo de lectura, ncid_in
  
@@ -282,7 +292,7 @@
  CH4_in = CH4_out(925:1450,:)
  CH1_in = CH1_out(3700:5800,:)
  
- ! Correccion de datos      ! Revisar hacia abajo o hacia al lado ??
+ ! Correccion de datos 
  do i = 1, NXf
     do j = 1, NYf
 		if (CH1_in(i,j) > CH1_max(i,j)) then
