@@ -1,12 +1,9 @@
 
-!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
       SUBROUTINE STRPSRB(LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,&
       ISUB,TAUW,TOP,NCL,INTVAL,tstat,rf,zstat,CLOLWC,CDR,TRANS,TDIR)
 
 !     calculate transmittance for clear and cloudy sky
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
 !     LATMOS  : atmosphere type
 !               1 - tropical
 !               2 - midlatitude summer
@@ -91,15 +88,14 @@
 !     WO2SW   :
 !     RAYM    :      
 !......................................................................
-!
+
       PARAMETER (LEVMAX = 51, LAYMAX = 50,MAXWEL=37 , MAXIND= 135)
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-!
+
       DIMENSION U(LAYMAX,MAXIND),V(LAYMAX,MAXIND)
       DIMENSION INAERO(LAYMAX),ASIG(LAYMAX,MAXWEL)
       DIMENSION SCA(LEVMAX),RAY(LEVMAX)
-      DIMENSION DOWN(LEVMAX),DIR(LEVMAX),DIF(LEVMAX),&
-     &  TEMP(LEVMAX),PRESS(LEVMAX),ALT(LEVMAX),ROL(LEVMAX),&
+      DIMENSION DOWN(LEVMAX),DIR(LEVMAX),DIF(LEVMAX),TEMP(LEVMAX),PRESS(LEVMAX),ALT(LEVMAX),ROL(LEVMAX),&
      &  ROH(LEVMAX),RO3(LEVMAX),DIRS(LEVMAX),DIFS(LEVMAX)
       DIMENSION DZ(LAYMAX),TW(LAYMAX),TAU(LAYMAX),TOHNW(LAYMAX), BET(LAYMAX),BET0(LAYMAX),OM(LAYMAX)
       DIMENSION SOL(MAXIND),INDEX(MAXIND)
@@ -114,7 +110,7 @@
       DATA INTVA / 20, 16,  1,  0,  0,  0,  0,  1/
 !      
       DATA INTVE / 29, 30, 37,  0,  0,  0,  0, 37/
-!
+
       DO 10   I =  1 ,  22
    10 INDEX(I) = I
       DO 20   I = 23 , 135
@@ -130,18 +126,10 @@
 !     subroutine LESEN - determination of atmospheric profiles
 !     input  - LATMOS,VIS,INDEX
 !     output - NLEV,SOL,DZ,PRESS,ALT,TEMP,ROL,ROH,RO3,SCA,RAY
-!
       CALL LESEN(LATMOS,VIS,INDEX,NLEV,SOL,DZ,PRESS,ALT,TEMP,ROL,ROH,RO3,SCA,RAY)          
-!
-!     MODIFICACOES SUGERIDAS PELO FERNANDO PARA PREVER A AGUA PRECIPITAVEL 
-!     A DIFERENTES ALTITUDES
 !
 !     calculation of the precitable water as function of relative
 !     humidity, partial pressure of water vapor and temperature
-!
- ZSTAT = 500.
- rf = 0.4
- tstat= 300.
       XD=287.05/1005.0
       PSTAT = 1013.25*EXP(-0.0001184*ZSTAT)
       PVSAT = EXP(26.23 - 5416.0/TSTAT)/100.0
@@ -240,7 +228,7 @@
 !
 !.....loop spectral intervals..........................................
 !
-      IBEG = INTVA(INTVAL)
+      IBEG = INTVA(INTVAL)  ! Falla !!!
       ISTO = INTVE(INTVAL)
       IF(IBEG.EQ.0.AND.ISTO.EQ.0) GOTO 100
 !
@@ -333,9 +321,10 @@
   100 CONTINUE           
 
 !     calculation of atmospheric transmittance
-
+		
       TRANS=DOWN(NLEV)/DOWN(1)
       TDIR=DIRS(NLEV)/DOWN(1)
+      print *, TRANS, TDIR
 
       RETURN
       END

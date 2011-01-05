@@ -21,12 +21,12 @@
  
  integer i, j, rec
  real ano, mes, diaj, dia 
- Real Alt, HR, Albedo, temp, vis
+ Real(8) :: Alt, HR, Albedo, temp, vis
  Real horad
  character (30) :: argument  ! Nombre de archivo 
  character(8)  :: fecha
  integer,dimension(8) :: tiempo, tiempof
- real, parameter :: pi= acos(-1.0), cdr= pi/180.0
+ real(8), parameter :: pi= acos(-1.0), cdr= pi/180.0
  
  ! Variables NETCDF archivo entrada
  integer :: ncid, ncid_in, status
@@ -36,13 +36,12 @@
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out   ! Matrices de archivo original
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
  integer, dimension(:,:), allocatable :: CH1_max, CH1_min, CH4_max,CH4_min  !  Matrices max min
- real, dimension(:,:), allocatable :: TCLEAR,TDIR, TCLOUD
+ real(8), dimension(:,:), allocatable :: TCLEAR,TDIR, TCLOUD
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
  integer :: CH1_varid, Ch4_varid
  integer :: CH1_max_varid, CH1_min_varid, CH4_max_varid, CH4_min_varid
- integer :: TDIRn
  
  integer :: start(NDIMS), count(NDIMS), countf(NDIMS)
  integer :: dimids(NDIMS), dimids_fine(NDIMS), dimids2d(NDIMS_IN)
@@ -58,11 +57,13 @@
 
  
  ! Variables Brasil
- Real :: E0,DEC,ET
- Real :: DECR, YLATR, CODEC, COLAT, SIDEC, SILAT
- Real :: ZN, TIMCOR, ROFF, IWP, ISUB, TOP, NCL, INTVAL, CLOLWC
- Real :: LATMOS,TS, TSOLAR, WSOLAR, COWI, COSZEN, THETA
-   
+ Real(8) :: E0,DEC,ET
+ Real(8) :: DECR, YLATR, CODEC, COLAT, SIDEC, SILAT
+ Real(8) :: ZN, TIMCOR, ROFF, TOP, CLOLWC
+ Real(8) :: TS, TSOLAR, WSOLAR, COWI, COSZEN, THETA
+ Real(8) :: T1SFC = 300.0, T2SFC = 294.0, T4SFC = 287.0, T3SFC = 272.2, T5SFC = 257.1
+ real(8) :: TDIRn, TCLOUDn, TCLEARn
+ integer :: LATMOS, IWP, ISUB, NCL, INTVAL
 !********************************************************** Fin declaracion Variables
  
  
@@ -144,12 +145,12 @@
  
  !**************************************************** Creacion de archivo de salida
  
- write (cano,'(F4.0)') ano
+ write (cano,'(I4)') NInt(ano)
  If (mes < 10 ) then
-	write(cmes,'(F1.0)') mes
+	write(cmes,'(I1)') NInt(mes)
 	filename_out = cano//'0'//cmes//'_rad.nc'
  Else
-	write(cmes,'(F2.0)') mes
+	write(cmes,'(I2)') NInt(mes)
 	filename_out = cano//cmes//'_rad.nc'
  End if
  
@@ -219,6 +220,10 @@
 			albedo = .20! (0-1.)
 			vis = 10.	! (km)
 			
+			!change relative humidity and albedo from percentual to relative values
+			albedo = albedo/1000.0
+			HR     = HR /100.0
+			
 			IF(Alt > 0. ) THEN 
 		
 			! calculation of the visibility at the station as function of visibility and altitude
@@ -227,17 +232,10 @@
 			 IF (VIS .GT. 150.)  VIS = 150.
 			 IF (VIS .LT.   2.)  VIS =   2.
 			 
-			! change relative humidity and albedo from percentual to relative values
-			!albedo = albedo/1000.0
-			!HR     = HR/100.0
-			! calculation of the precitable water as function of relative humidity, 
-			! partial pressure of water vapor and temperature 
-			! PVSAT   = EXP(26.23 - 5416.0/Temp)
-			! WH2O  = 0.493*hr*PVSAT/Temp
-			
 			! subroutine ASTRO - calculation of eccentricity correction, declination an equation of time
 			! input: JDAY ; output: E0,DEC,ET
 			CALL ASTRO(diaj,E0,DEC,ET) 
+			
 			DECR = DEC*cdr
 			YLATR= y(j)*cdr
 			CODEC = COS(DECR)
@@ -250,17 +248,33 @@
 			TIMCOR = (4.0*(15.0*ZN+x(i))+ET)/60.0
 			
 			! Fixed input parameters for subroutine strpsrb
-			ROFF   = 0.0
-			IWP    = 3
-			ISUB   = 2
-			TOP    = 500.0
-			NCL    = 2
-			INTVAL = 3
-			CLOLWC = 0.0
+			ROFF   = 0.0		!     ROFF    : difference in water vapor
+			IWP    = 3			!     IWP     : cloud droplet size distribution
+			ISUB   = 2			!     ISUB    : use subroutine WOLKE1 (ISUB=1) or WOLKE2 (ISUB=2)
+			TOP    = 500.0		!     TOP     : cloud top (mbar)
+			NCL    = 2			!     NCL     : number of cloud layers
+			INTVAL = 3			!     INTVAL  : spectral interval
+			CLOLWC = 0.0		!     CLOLWC  : cloud liquid water content
 			
-			! subroutine ATMOSPHERE - choose atmosphere by surface temperature
-			! input: Temp ; output: LATMOS,TS
-			CALL ATMOSPHERE(Temp,LATMOS,TS)
+			! Choose atmosphere by surface temperature
+
+			IF (temp.LT.297.0 .AND. temp.GE.290.5) THEN
+				LATMOS = 2
+				TS     = temp - T2SFC
+			Else if (temp.LT.290.5 .AND. temp.GE.279.5) THEN
+				LATMOS = 4
+				TS     = temp - T4SFC
+			Else IF(temp.LT.279.5 .AND. temp.GE.264.5) THEN
+				LATMOS = 3
+				TS     = temp - T3SFC
+			Else IF(temp.LT.264.5) THEN
+				LATMOS = 5
+				TS     = temp - T5SFC
+			Else
+				LATMOS = 1
+				TS     = Temp - T1SFC
+			ENDIF
+			
 			
 			TSOLAR = horad+TIMCOR    !para entrada com horario em UTC
 			
@@ -277,12 +291,13 @@
 			! output - TRANS
 			If(Theta .LE. 90) then
 				CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,0,IWP,ISUB,&	
-				&     0.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLEAR(i,j),TDIR(i,j))
-				print *, TCLEAR(i,j),TDIR(i,j)
+				&     0.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLEARn,TDIRn)
+				TCLEAR(i,j) =TCLEARn
+				TDIR(i,j) = TDIRn
 				
 				CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,1,IWP,ISUB,&	
-				&    100.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLOUD(i,j),TDIRn)
-				print *, TCLOUD(i,j),TDIRn
+				&    100.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLOUDn,TDIRn)
+				TCLOUD(i,j) =TCLOUDn
 			
 			else
 				TCLEAR(i,j) = -2.0
@@ -290,14 +305,7 @@
 				TCLOUD(i,j) = -2.0
 				
 			end if
-			
-			!CALL D2STR(x(i),y(j),Temp,HR,Alt,albedo,vis,diaj,horad,0, 0.0D0,&
-			!			&  TCLEAR(i,j),TDIR(i,j))
 
-			
-			
-			!CALL D2STR(x(i),y(j),Temp,HR,Alt,albedo,vis,diaj,horad,1,100.0D0,&
-			!			&  TCLOUD(i,j),TDIRn)
 			
 			Else  ! Si esta fuera de territorio Chileno.
 				TCLEAR(i,j) = -1.0
@@ -305,8 +313,11 @@
 				TCLOUD(i,j) = -1.0
 			End if
 		End do
+		print *,i
 	End do
-
+	
+	print *,'rec: ',rec
+	
 	call check( nf90_put_var(ncid_rad, Global_varid, TCLEAR))
 	call check( nf90_put_var(ncid_rad, Difusa_varid, TCLOUD))
 	call check( nf90_put_var(ncid_rad, Directa_varid, TDIR))
