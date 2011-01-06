@@ -1,8 +1,7 @@
-
+!     calculate transmittance for clear and cloudy sky
       SUBROUTINE STRPSRB(LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,&
       ISUB,TAUW,TOP,NCL,INTVAL,tstat,rf,zstat,CLOLWC,CDR,TRANS,TDIR)
 
-!     calculate transmittance for clear and cloudy sky
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !     LATMOS  : atmosphere type
 !               1 - tropical
@@ -102,122 +101,86 @@
       DIMENSION IH(113),INTVA(8),INTVE(8)
       DIMENSION WH2O1(LAYMAX)
       DIMENSION WCO2SW(LAYMAX),WO3SW(LAYMAX),WO2SW(LAYMAX),RAYM(LAYMAX)
-!
+
       LOGICAL* 1 LCLOUD
-!
       DATA IH / 5*23, 3*24, 25, 5*26, 27, 8*28, 29, 9*30, 31, 10*32, 2*33, 20*34, 35, 36*36, 10*37 /
-!
       DATA INTVA / 20, 16,  1,  0,  0,  0,  0,  1/
-!      
       DATA INTVE / 29, 30, 37,  0,  0,  0,  0, 37/
 
       DO 10   I =  1 ,  22
    10 INDEX(I) = I
       DO 20   I = 23 , 135
    20 INDEX(I) = IH(I-22)
-!
+
       LCLOUD = .FALSE.                                                 
       IF (ICLOUD .GT. 0) THEN
-      LCLOUD = .TRUE.
+		LCLOUD = .TRUE.
       ENDIF
-!
 !......................................................................
-!
 !     subroutine LESEN - determination of atmospheric profiles
 !     input  - LATMOS,VIS,INDEX
 !     output - NLEV,SOL,DZ,PRESS,ALT,TEMP,ROL,ROH,RO3,SCA,RAY
       CALL LESEN(LATMOS,VIS,INDEX,NLEV,SOL,DZ,PRESS,ALT,TEMP,ROL,ROH,RO3,SCA,RAY)          
-!
+
 !     calculation of the precitable water as function of relative
 !     humidity, partial pressure of water vapor and temperature
       XD=287.05/1005.0
       PSTAT = 1013.25*EXP(-0.0001184*ZSTAT)
       PVSAT = EXP(26.23 - 5416.0/TSTAT)/100.0
       WMIXRAT=0.622*RF*PVSAT/1013.25
-      XM=(1.0-0.26*WMIXRAT)*XD              !4
-      TNEW=TSTAT*((PSTAT/1013.25)**XM)      !3
-!     WRITE(*,*) 'tnew=',TNEW,'tstat=',TSTAT,'dalt=',dalt
-      PVSAT = EXP(26.23 - 5416.0/TNEW)      !2
-      WH2O  = 0.493*RF*PVSAT/TNEW           !1
-!
+      XM=(1.0-0.26*WMIXRAT)*XD              
+      TNEW=TSTAT*((PSTAT/1013.25)**XM)      
+      PVSAT = EXP(26.23 - 5416.0/TNEW)      
+      WH2O  = 0.493*RF*PVSAT/TNEW           
+
 !     test for precitable water less than 0.0000001 cm
-!
       IF (WH2O .LE. 0.0000001) THEN
-      WRITE (*,*)'NEGATIVE PRECIPITABLE WATER VAPOR',WH2O,' IS SET TO 0.000001 (cm)',TSTAT,ZSTAT
-      WH2O  = 0.0000001
+		WRITE (*,*)'NEGATIVE PRECIPITABLE WATER VAPOR',WH2O,' IS SET TO 0.000001 (cm)',TSTAT,ZSTAT
+		WH2O  = 0.0000001
       ENDIF
-!
-!     TERMINO DAS MODIFICACOES
-!
-!     
+      
+!     TERMINO DAS MODIFICACOES  
 !......................................................................
-!
       NLAY=NLEV-1
-!
       IGO = 1
       IF(ISUB.EQ.1) THEN
-!
 !......................................................................
-!
-!     subroutine WOLKE1 - determination of clouds properties, input is
-!                         CLOLWC
-!     input  - NCL,NLAY,TOP,IWP,LCLOUD,CLOLWC,DZ,TEMP,PRESS
-!     output - NCL,IGO,TAUW,TW,K1
-!
-      CALL WOLKE1(NCL,NLAY,IGO,TOP,TAUW,IWP,LCLOUD,CLOLWC, DZ,TEMP,PRESS,TW,K1)
-!
-!......................................................................
-!
+! Subroutine WOLKE1 - determination of clouds properties, input is CLOLWC
+! input  - NCL,NLAY,TOP,IWP,LCLOUD,CLOLWC,DZ,TEMP,PRESS
+! output - NCL,IGO,TAUW,TW,K1
+		CALL WOLKE1(NCL,NLAY,IGO,TOP,TAUW,IWP,LCLOUD,CLOLWC, DZ,TEMP,PRESS,TW,K1)
+
       ELSE
-!
-!......................................................................
-!
-!     subroutine WOLKE2 - determination of clouds properties, input is
-!                         TAUW
-!     input  - NCL,NLAY,TOP,TAUW,IWP,LCLOUD,DZ,TEMP,PRESS
-!     output - NCL,CLOLWC,TW,K1
-!
+
+! Subroutine WOLKE2 - determination of clouds properties, input is TAUW                       
+! input  - NCL,NLAY,TOP,TAUW,IWP,LCLOUD,DZ,TEMP,PRESS
+! output - NCL,CLOLWC,TW,K1
          CALL WOLKE2(NCL,NLAY,TOP,TAUW,IWP,LCLOUD,CLOLWC, DZ,TEMP,PRESS,TW,K1)
-!
-!......................................................................
-!
       END IF
 !
       IF(IGO.NE.1) RETURN
 !
 !......................................................................
-!
-!     subroutine VARIA - changes atmospheric profiles
-!     input  - RAY,NCL,NLAY,TS,ROFF,WH2O,K1,LCLOUD,DZ,TEMP,PRESS,ROL,ROH,RO3
-!     output - TEMP,ROH,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM
-!     
+! Subroutine VARIA - changes atmospheric profiles
+! input  - RAY,NCL,NLAY,TS,ROFF,WH2O,K1,LCLOUD,DZ,TEMP,PRESS,ROL,ROH,RO3
+! output - TEMP,ROH,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM
       CALL VARIA(RAY,NCL,NLAY,TS,ROFF,WH2O,K1,LCLOUD,DZ,TEMP,PRESS,ROL,ROH,RO3,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM)
-!
 !......................................................................
-!
-!     subroutine AERO - determination of aerosol profiles
-!     input  - SCA,NLAY,DZ,ALT
-!     output - INAERO,ASIG
-!
+! Subroutine AERO - determination of aerosol profiles
+! input  - SCA,NLAY,DZ,ALT
+! output - INAERO,ASIG
       CALL AERO(SCA,NLAY,DZ,ALT,INAERO,ASIG)
-!
 !......................................................................
-!
-!     subroutine ATMOS - determination of absorption and scattering
-!     input  - NLAY,INDEX,DZ,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM
-!     output - U,V
-!
+! Subroutine ATMOS - determination of absorption and scattering
+! input  - NLAY,INDEX,DZ,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM
+! output - U,V
       CALL ATMOS(NLAY,INDEX,DZ,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM,U,V)
-!
 !......................................................................
-!
       THETA = DMAX1(THETA,0.1D0)
       COSZEN= DCOS(CDR*THETA) 
-!
+      
 !     condition to avoid that some parts of the map be in the night      
-!                                                                  
       IF(COSZEN.LT.0.01) COSZEN=0.01
-!
       DO 30  I=1,LEVMAX
         DIR(I)    = 0.
         DIF(I)    = 0.
@@ -225,38 +188,30 @@
         DIRS(I)   = 0.
         DIFS(I)   = 0.
    30 CONTINUE
-!
+
 !.....loop spectral intervals..........................................
-!
-      IBEG = INTVA(INTVAL)  ! Falla !!!
+      IBEG = INTVA(INTVAL)  
       ISTO = INTVE(INTVAL)
       IF(IBEG.EQ.0.AND.ISTO.EQ.0) GOTO 100
-!
+
       DO 40 IALL = 1,135
-      IDO = INDEX(IALL)
+	     IDO = INDEX(IALL)
       IF(IDO.LT.IBEG.OR.IDO.GT.ISTO) GOTO 40
-!
+
       NLA = NLEV
       NLY = NLAY
-!
       ALDIF = SFCALB
       ALDR  = SFCALB
-!
 !......................................................................
-!
-!     subroutine BETAS - determination of spectral absorption, extinction 
-!                        and scattering for each atmospheric layer
-!     input  - NCL,NLAY,IALL,COSZEN,INDEX,TW,K1,IWP,LCLOUD,INAERO,ASIG,U,V
-!     output - BET,BET0,OM,TAU,TOHNW
-!
+! subroutine BETAS - determination of spectral absorption, extinction and scattering for each atmospheric layer
+! input  - NCL,NLAY,IALL,COSZEN,INDEX,TW,K1,IWP,LCLOUD,INAERO,ASIG,U,V
+! output - BET,BET0,OM,TAU,TOHNW
       CALL BETAS (NCL,NLAY,IALL,COSZEN,INDEX,BET,BET0,OM,TAU,TOHNW,TW,K1,IWP,LCLOUD,INAERO,ASIG,U,V)
-!
 !......................................................................
-!
       DIR(1)  = COSZEN
       A       = 0.
       AA      = 0.
-!
+
       DO 50  I = 2 , NLEV
         A       =  A + TOHNW(I-1)
         AA      =  AA + TAU(I-1)
@@ -266,31 +221,23 @@
         IF (A .GT. 25.)  GOTO 200
         IF (I .EQ. NLEV)  GOTO 300
    50 CONTINUE
-!
+
   200 NLA     = I-1
       NLY     = NLA-1
       ALDIF   = 0.
       ALDR    = 0.
   300 CONTINUE
       IF (NLY.GT.0) THEN
-!
 !......................................................................
-!
-!     subroutine MATBAU - calculation of diffuse irradiation
-!                         for each spectral interval
-!     input  - NLY,ALDIF,ALDR,COSZEN,BET,BET0,OM,TAU,DIR
-!     output - DIF
-!
-      CALL MATBAU(NLY,ALDIF,ALDR,COSZEN,BET,BET0,OM,TAU,DIR,DIF)
-!
+! Subroutine MATBAU - calculation of diffuse irradiation for each spectral interval
+! input  - NLY,ALDIF,ALDR,COSZEN,BET,BET0,OM,TAU,DIR
+! output - DIF
+		CALL MATBAU(NLY,ALDIF,ALDR,COSZEN,BET,BET0,OM,TAU,DIR,DIF)
 !......................................................................
-!
       ENDIF
-!
+
 !......................................................................
-!
-!   upward (UP), downward diffuse (DIF)                    
-!   and downward direct (DIR) fluxes                       
+!   upward (UP), downward diffuse (DIF) and downward direct (DIR) fluxes                       
 !   have been computed for unity input fluxes for each      
 !   layer boundary for the wave-length interval IALL.      
 !   The true fluxes are obtained by multiplication with the 
@@ -298,10 +245,8 @@
 !.......................................................................
 !                                                           
 !   for each boundary NLA spectral integrated quantities 
-!
 !     DIF  : downward diffuse flux                     
 !     DIR  : downward direct flux                           
-!                                                           
 !   are computed                                            
 !.......................................................................
 
@@ -321,21 +266,17 @@
   100 CONTINUE           
 
 !     calculation of atmospheric transmittance
-		
       TRANS=DOWN(NLEV)/DOWN(1)
       TDIR=DIRS(NLEV)/DOWN(1)
-      print *, TRANS, TDIR
 
       RETURN
       END
+! --------------------------------------------------------------------------/ Fin Main
 
-!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! --------------------------------------------------------------------------
       SUBROUTINE LESEN(LATMOS,VIS,INDEX,NLEV,SOL,DZ,PRESS,ALT,TEMP,ROL,ROH,RO3,SCA,RAY)
-
 !            determination of atmospheric profiles
-
-!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
+! --------------------------------------------------------------------------
 !     LATMOS  : atmosphere type
 !               1 - tropical
 !               2 - midlatitude summer
@@ -469,7 +410,6 @@
 !      fit new aerosol profile between fittop(5km) and fitbot(0km) for
 !      a surface visibility VIS = 5 - 50km taken from the input data
 !.....................................................................
-
       FITTOP  = 5.0
       FITBOT  = 0.0
       JTOP    = 51 - INT(FITTOP)
@@ -488,23 +428,17 @@
 
 ! ....................................................................
 !     *** model atmosphere ***
-
       OPEN (UNIT=9,FILE='Srbpres.dat', FORM='FORMATTED',STATUS='OLD')
 
       READ (9,*) NLEV
       READ (9,*) (PRESS(I),I=1,NLEV)
-!      WRITE(*,*) PRESS
       NLAY = NLEV - 1
       CLOSE (9)
 !......................................................................
-
-!     subroutine PTZQD - calculation of atmospheric properties for each
-!                        level
-!     input  - LATMOS,NLEV,PRESS
-!     output - PRESS,ALT,TEMP,ROL,ROH,RO3
-
+! Subroutine PTZQD - calculation of atmospheric properties for each level
+! input  - LATMOS,NLEV,PRESS
+! output - PRESS,ALT,TEMP,ROL,ROH,RO3
       CALL PTZQD(LATMOS,NLEV,PRESS,ALT,TEMP,ROL,ROH,RO3)
-
 !......................................................................
 
       DO 30  I = 1 , NLEV
@@ -536,11 +470,8 @@
 
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       SUBROUTINE PTZQD(LATMOS,NLEV,PRESS,ALT,TEMP,ROL,ROH,RO3)
-
 !     calculation of atmospheric properties for each level
-
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 !     LATMOS  : atmosphere type
 !               1 - tropical
 !               2 - midlatitude summer
@@ -574,14 +505,12 @@
 !     HT      :
 !     RKn     :
 !......................................................................
-!
       PARAMETER(LEVMAX=51)
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-!      
-      DIMENSION PRESS(LEVMAX),ALT(LEVMAX),TEMP(LEVMAX),ROL(LEVMAX),ROH(LEVMAX),RO3(LEVMAX)
-!     
+ 
+      DIMENSION PRESS(LEVMAX),ALT(LEVMAX),TEMP(LEVMAX),ROL(LEVMAX),ROH(LEVMAX),RO3(LEVMAX)   
       DATA RM,DELZAP,R,G0,ZMASS,AA /348.36764D0,0.5D0,8.314D0,9.81D0, 28.9D0,6400.0D0/
-!     
+    
       NLEVD2=NLEV*0.5
       DO 10 I=1,NLEVD2
       J=NLEV-I+1
@@ -589,14 +518,14 @@
       PRESS(J)=PRESS(I)
       PRESS(I)=UMSP
    10 CONTINUE
-!
+
       ALT(1)=0.0D0
       TEMP(1)=PTZQ1(ALT(1),LATMOS)
       QL=PRESS(1)*RM/TEMP(1)
       ROH(1)=PTZQ2(PRESS(1),LATMOS,QL)
       ROL(1)=QL/(1.0D0+0.608D0*ROH(1)/QL)
       RO3(1)=PTZQ3(PRESS(1),LATMOS)
-!
+
       DO 20 N=1,NLEV-1
       DLOGP=7.0D0*DLOG(PRESS(N)/PRESS(N+1))
       NINT=DLOGP/DELZAP+1
@@ -645,15 +574,11 @@
    50 CONTINUE
       RETURN
       END
-!
+      
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
       SUBROUTINE WOLKE1(NCL,NLAY,IGO,TOP,TAUW,IWP,LCLOUD,CLOLWC,DZ,TEMP,PRESS,TW,K1)
-!
 !     determination of clouds properties, input is CLOLW!
-!     
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
 !     IWP     : cloud droplet size distribution
 !     TAUW    : cloud optical thickness
 !              0.0 - no clouds 
@@ -687,19 +612,18 @@
 !     IWO     :
 !     KWO     :
 !......................................................................
-!
       PARAMETER (LEVMAX = 51, LAYMAX = 50, MAXWEL= 37, MAXIND= 135)
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-!
+
       DIMENSION EWOL(16,8)
       DIMENSION TEMP(LEVMAX),PRESS(LEVMAX)
       DIMENSION DZ(LAYMAX)
       DIMENSION FLW(LAYMAX)
       DIMENSION TW(LAYMAX),FIXLWC(8)
       LOGICAL*1 LCLOUD 
-!      
+    
       DATA FIXLWC / 0.05, 0.14, 0.28, 0.47, 1.00, 2.50, 0.13, 0.44 /
-!
+      
       DATA EWOL / 15.2,  15.4,  15.7,  15.3,  15.6,  15.8,  16.0,  15.8,  16.0,&
      &  16.0,  15.9,  16.5,  17.1,  17.2,  21.2,  18.1,&
      &  39.4,  40.1,  41.0,  40.9,  42.3,  41.9,  41.6,  41.2,  42.1,&
@@ -716,7 +640,7 @@
      &   5.6,   5.6,   5.6,   5.6,   5.6,   5.7,   5.7,&
      &  12.3,  12.3,  12.3,  12.3,  12.4,  12.4,  12.4,  12.4,  12.4,&
      &  12.4,  12.4,  12.5,  12.5,  12.6,  12.6,  12.7/
-!
+     
       TAUW    =  0.0
       ALW     =  0.0
       DO 10  I = 1 , NLAY
@@ -724,15 +648,15 @@
         TW(I)  = 0.0
    10 CONTINUE
       K1 = 0
-!
+
       IF (.NOT. LCLOUD)                      GOTO 100
-!
+
       DO 20  I = 1 , NLAY
         PWZW =  PRESS(I)*1000.0D0 + 1.0D0
         IF (TOP.LE.PWZW)                     GOTO 200
    20 CONTINUE
   200 K1 = I-1
-!
+
       ICLT = K1 + 1
       ICLB = ICLT + NCL
       IF(ICLB.GT.NLAY+1) THEN
@@ -740,7 +664,7 @@
         ICLB = NLAY + 1
         NCL = ICLB - ICLT
       ENDIF
-!
+
       TTOP = TEMP(ICLT)
       TBOT = TEMP(ICLB)
       EXPON = (7.5D0*(TTOP-273.15D0))/(TTOP-35.85D0)
@@ -754,7 +678,7 @@
         IGO = 0
         RETURN
       ENDIF
-!
+
       EXMASS  = EWOL(1,IWP)/FIXLWC(IWP)/1000.0D0
       DO 30  IWO = 1 , NCL
         KWO      = K1 + IWO
@@ -763,20 +687,15 @@
         TAUW     = TAUW+TW(KWO)
         ALW      = ALW+FLW(KWO)
    30 CONTINUE
-!
   100 CONTINUE
-!
+
       RETURN
       END
-!
+
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
       SUBROUTINE WOLKE2 (NCL,NLAY,TOP,TAUW,IWP,LCLOUD,CLOLWC,DZ,TEMP,PRESS,TW,K1)
-!
 !     determination of clouds properties, input is CLOLWC
-!     
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
 !     IWP     : cloud droplet size distribution
 !     TAUW    : cloud optical thickness
 !              0.0 - no clouds 
@@ -810,7 +729,6 @@
 !     KWO     :
 !     ZTOTAL  :
 !......................................................................
-!
       PARAMETER (LEVMAX = 51, LAYMAX = 50, MAXWEL= 37, MAXIND= 135)
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       DIMENSION EWOL(16,8)
@@ -820,7 +738,7 @@
       DIMENSION TW(LAYMAX),FIXLWC(8)
       LOGICAL*1 LCLOUD
       DATA FIXLWC /0.05, 0.14, 0.28, 0.47, 1.00, 2.50, 0.13, 0.44 /
-!
+
       DATA EWOL / 15.2,  15.4,  15.7,  15.3,  15.6,  15.8,  16.0,  15.8,  16.0,&
      &  16.0,  15.9,  16.5,  17.1,  17.2,  21.2,  18.1,&
      &  39.4,  40.1,  41.0,  40.9,  42.3,  41.9,  41.6,  41.2,  42.1,&
@@ -837,15 +755,15 @@
      &   5.6,   5.6,   5.6,   5.6,   5.6,   5.7,   5.7,&
      &  12.3,  12.3,  12.3,  12.3,  12.4,  12.4,  12.4,  12.4,  12.4,&
      &  12.4,  12.4,  12.5,  12.5,  12.6,  12.6,  12.7 /
-!
+
       DO 10  I = 1 , NLAY
         FLW(I) = 0.0
         TW(I)  = 0.0
    10 CONTINUE
       K1 = 0
-!
+
       IF (.NOT. LCLOUD)                      GOTO 100
-!
+
       DO 20  I = 1 , NLAY
         PWZW =  PRESS(I)*1000.0 + 1.0
         IF (TOP .LE. PWZW)                   GOTO 200
@@ -883,27 +801,21 @@
       WRITE(*,*) ' WARNING: cloud LWC unrealistically large ',TEMP
       read(*,*) 
       ENDIF
-!
+
       DO 40  IWO = 1 , NCL
         KWO      = K1 + IWO
         FLW(KWO) = CLOLWC*DZ(KWO)*1000.
         TW(KWO)  = FLW(KWO)*EXMASS
    40 CONTINUE
-!
-!
   100 CONTINUE
-!
+  
       RETURN
       END
-!
+
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
       SUBROUTINE VARIA(RAY,NCL,NLAY,TS,ROFF,WH2O,K1,LCLOUD,DZ,TEMP,PRESS,ROL,ROH,RO3,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM)
-!
-!                 changes atmospheric profiles
-!
+!   changes atmospheric profiles
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
 !     TS      : difference between surface and characteristical temperatures
 !     ROFF    : difference in water vapor
 !     NCL     : number of cloud layers
@@ -962,19 +874,18 @@
 !     WH2O1   :
 !     TB      :
 !......................................................................
-!
       PARAMETER (LEVMAX = 51,LAYMAX = 50, MAXWEL= 37, MAXIND= 135)
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-!
+
       LOGICAL*1 LCLOUD
       DIMENSION RAY(LEVMAX)
       DIMENSION TEMP(LEVMAX),WAS(LEVMAX),PRESS(LEVMAX),POO(LEVMAX),ROL(LEVMAX),ROH(LEVMAX),RO3(LEVMAX)
       DIMENSION TM(LAYMAX),DZ(LAYMAX),DI(LAYMAX)
       DIMENSION TB(LAYMAX),RM(LAYMAX),WO3(LAYMAX),PP(LAYMAX),WCO2(LAYMAX),WH2O1(LAYMAX),TT(LAYMAX)
       DIMENSION WCO2SW(LAYMAX),WO3SW(LAYMAX),WO2SW(LAYMAX),RAYM(LAYMAX)
-!
+
       DATA O3P,O3T / 0.36479D0, 0.0071908D0 /
-!
+
       PPMCO2 = 300.0D0
       CONZ=PPMCO2/330.D0
       NLEV  = NLAY + 1
@@ -989,22 +900,21 @@
       SO3NR  = 0.0
       SCO2   = 0.0
       SCO2NR = 0.0
-!
+
 !    surface temperature TS and water vapor adjustment +- 0-1
-!
       KLEV = 5
       DIFT = TS/(KLEV-1)
       NSTOP=NLEV - KLEV - 2
-!
+
       DO 10  IUP = NLEV,NSTOP,-1
          KLEV = KLEV - 1
          TEMP(IUP) = TEMP(IUP) + (DIFT*KLEV)
    10 CONTINUE
-!
+
       DO 20  I=1,NLEV
          ROH(I) = ROH(I)*(1.0+ROFF)
    20 CONTINUE
-!
+
       DO 30  I = 1 , NLAY
          TM(I)  = (TEMP(I)+TEMP(I+1))*0.5D0
          WAS(I) = ROH(I)/ROL(I)
@@ -1023,14 +933,14 @@
            ROH(KGRZ) = 216.67D0*ESAT/TGRZ
    40    CONTINUE
   100 CONTINUE
-!
+
       DO 50 I=1,NLAY
       XR = DLOG(RAY(I)/RAY(I+1))
       XP = DLOG(PRESS(I)/PRESS(I+1))
       XH = DLOG(ROH(I)/ROH(I+1))
       X3 = DLOG(RO3(I)/RO3(I+1))
       XL = DLOG(ROL(I)/ROL(I+1))
-!
+
       RAYM(I) = RAY(I)*DEXP(-0.5D0*XR) * DYOU
       PP(I)   = PRESS(I)*DEXP(-0.5D0*XP) * QP0
       RM(I)   = ROH(I)*DEXP(-0.5D0*XH)
@@ -1045,7 +955,7 @@
       WO3(I)    = WO3SW(I)*PP(I)**O3P*TT(I)**O3T
       WH2O1(I)   = RM(I)*0.1D0*PP(I)**0.9D0*TT(I)**0.45D0
       TB(I)     = 1745.D0 * (1.D0/TQ - 1.D0/296.D0)
-!
+
       SH2O   = SH2O   + RM(I)*0.1D0 * DZ(I)
       SH2ONR = SH2ONR + WH2O1(I)     * DZ(I)
       SO3    = SO3    + WO3SW(I)    * DZ(I)
@@ -1056,18 +966,14 @@
       DO 60 I=1,NLAY
       WH2O1(I) = WH2O1(I)*WH2O/SH2O
    60 CONTINUE
-!
+
       RETURN
       END
-!
+
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
       SUBROUTINE AERO(SCA,NLAY,DZ,ALT,INAERO,ASIG)
-!
 !          determination of aerosol profiles
-!
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
 !     SCA     : 
 !     DZ      : thickness of each atmospheric layer
 !     NLAY    : number of atmospheric layers
@@ -1080,16 +986,16 @@
 !     EXAER   :
 !     VIS1    :
 !......................................................................
-!
+
       PARAMETER (LEVMAX = 51, LAYMAX = 50, MAXWEL= 37, MAXIND= 135)
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-!
+
       DIMENSION INAERO(LAYMAX),ASIG(LAYMAX,MAXWEL)
       DIMENSION EXAER(MAXWEL,3)
       DIMENSION SCA(LEVMAX)
       DIMENSION ALT(LEVMAX)
       DIMENSION DZ(LAYMAX)
-!
+
       DATA EXAER /&
      & 1.493, 1.502, 1.514, 1.526, 1.538, 1.550, 1.550, 1.550, 1.550,&
      & 1.550, 1.548, 1.534, 1.513, 1.469, 1.424, 1.360, 1.249, 1.123,&
@@ -1106,13 +1012,13 @@
      & 1.000, 0.980, 0.961, 0.949, 0.939, 0.933, 0.930, 0.920, 0.910,&
      & 0.899, 0.883, 0.866, 0.850, 0.823, 0.793, 0.748, 0.704, 0.584,&
      & 0.665 /
-!
+
       DO 10  I = 1 , NLAY
         INAERO(I)  = 1
         IF (ALT(I) .LT. 10.01)    INAERO(I)=2
         IF (ALT(I) .LT.  2.01)    INAERO(I)=3
    10 CONTINUE
-!
+
          DO 20  I = 1 , 37
          DO 30  J = 1 , NLAY
             K         = INAERO(J)
@@ -1123,13 +1029,12 @@
    20    CONTINUE
       RETURN
       END
-!
+
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        SUBROUTINE ATMOS (NLAY,INDEX,DZ,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM,U,V)
-!            
-!           determination of absorption and scattering
-!  !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!  !     INDEX   : index of spectral intervals
+        SUBROUTINE ATMOS (NLAY,INDEX,DZ,WH2O1,WCO2SW,WO3SW,WO2SW,RAYM,U,V)         
+!    determination of absorption and scattering
+!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!     INDEX   : index of spectral intervals
 !     DZ      : thickness of each atmospheric layer
 !     NLAY    : number of atmospheric layers
 !     WH2O1   :
@@ -1164,6 +1069,7 @@
       DIMENSION XWELSW(MAXWEL)
       DIMENSION SICO(50),SIHO(50),SIO3(50),SR(50),INDEX(MAXIND)
       DIMENSION WCO2SW(LAYMAX),WO3SW(LAYMAX),WO2SW(LAYMAX),RAYM(LAYMAX)
+      
       DATA RB /  22*0.0000E+0,&
      & 0.2080E+1,0.9183E-1,0.8318E+1,0.2612E+0,0.0000E+0,0.0000E+0,&
      & 0.0000E+0,0.0000E+0,0.0000E+0,0.2023E+1,0.9120E-1,0.8128E+1,&
@@ -1259,10 +1165,11 @@
    10 CONTINUE
       RETURN
       END
-!  !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        SUBROUTINE BETAS(NCL,NLAY,IALL,COSZEN,INDEX,BET,BET0,OM,TAU,TOHNW,TW,K1,IWP,LCLOUD,INAERO,ASIG,U,V)
-!  !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!  !     IWP     : cloud droplet size distribution
+      
+!   ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   SUBROUTINE BETAS(NCL,NLAY,IALL,COSZEN,INDEX,BET,BET0,OM,TAU,TOHNW,TW,K1,IWP,LCLOUD,INAERO,ASIG,U,V)
+!   ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!     IWP     : cloud droplet size distribution
 !     NCL     : number of cloud layers
 !     INDEX   : index of spectral intervals
 !     NLAY    : number of atmospheric layers
@@ -1406,7 +1313,7 @@
      & 0.744, 0.747, 0.750, 0.751, 0.752, 0.753, 0.753, 0.754, 0.755,&
      & 0.757, 0.760, 0.762, 0.764, 0.769, 0.775, 0.783, 0.790, 0.835,&
      & 0.760/
-!     
+  
       DATA INWOSW / 22* 1,  5* 2,  3* 3,  4,  5* 5,  6,  8* 7,  8, 9* 9,  10,&
      & 10*11,  2*12, 20*13, 14, 36*15, 10*16 /
        KA    =  INDEX(IALL)
@@ -1452,11 +1359,11 @@
    100 CONTINUE
        RETURN
       END
-!  !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        SUBROUTINE MATBAU(NLY,ALDIF,ALDR,COSZEN,BET,BET0,OM,TAU,DIR,DIF)
-!  !      calculation of diffuse irradiation for each spectral interval
-!  !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!  !     DIR     : direct irradiation for each spectral interval (Wh/m2)
+! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   SUBROUTINE MATBAU(NLY,ALDIF,ALDR,COSZEN,BET,BET0,OM,TAU,DIR,DIF)
+!  calculation of diffuse irradiation for each spectral interval
+! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!     DIR     : direct irradiation for each spectral interval (Wh/m2)
 !     DIF     : diffuse irradiation for each spectral interval (Wh/m2)
 !     NLY     : NLAY-1
 !     ALDIF   : surface albedo for cloudy sky
@@ -1556,13 +1463,13 @@
         S(LB)   =   DIR(L)*WU*(Y(L)-Y(L-1))
         S(LA)   =   DIR(L)*WU*(X(L)-X(L-1))
    20 CONTINUE                             
-  !......................................................................
-  !     subroutine LINGAU - 
+
+!......................................................................
+!     subroutine LINGAU - 
 !     input  - N,AM1,AM2,AM3,AM4,S
 !     output - AM2,AM3,AM4,S
-
       CALL LINGAU(N,AM1,AM2,AM3,AM4,S)
-  !......................................................................
+!......................................................................
       UP (ISS) =  S(2*NLY-1)*G(NLY)+S(2*NLY)*XH(NLY)+X(NLY)*WU*DIR(ISS)
       DIF(ISS) =  S(2*NLY-1)*G(NLY)*D(NLY)+S(2*NLY)*XH(NLY)*F(NLY)+Y(NLY)*WU*DIR(ISS)
       DO 30  I = 1 , NLY
@@ -1585,6 +1492,7 @@
    40 CONTINUE
       RETURN
       END
+      
 !  !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       SUBROUTINE LINGAU(N,AM1,AM2,AM3,AM4,S)
 !  !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1635,61 +1543,57 @@
       S(1) = (S(1) - AM4(1) * S(2)) / AM3(1)
       RETURN
       END
-!  !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         DOUBLE PRECISION FUNCTION PTZQ1(DZ,LATMOS)
-!  !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       DIMENSION DZB(10,6),C(11,6),DELTA(10,6),TSTAR(6)
-!  C----->>> tropical sounding <<<
+!----->>> tropical sounding <<<
       DATA (DZB(N,1),N=1,10)/2.0D0,3.0D0,16.5D0,21.5D0,45.0D0,51.0D0,&
      & 70.0D0,100.0D0,200.0D0,300.0D0/
       DATA (C(N,1),N=1,11)/-6.0D0,-4.0D0,-6.7D0,4.0D0,2.2D0,1.0D0,&
      & -2.8D0,-0.27D0,0.0D0,0.0D0,0.0D0/
       DATA (DELTA(N,1),N=1,10)/0.5D0,0.5D0,0.3D0,0.5D0,6*1.0D0/
-!  C----->>> midlatitude summer <<<
+!----->>> midlatitude summer <<<
       DATA (DZB(N,2),N=1,10)/1.5D0,6.5D0,13.0D0,18.0D0,26.0D0,36.0D0,&
      & 48.0D0,50.0D0,70.0D0,100.0D0/
       DATA (C(N,2),N=1,11)/-4.0D0,-6.0D0,-6.5D0,0.0D0,1.2D0,2.2D0,&
      & 2.5D0,0.0D0,-3.0D0,-0.25D0,0.0D0/
       DATA(DELTA(N,2),N=1,10)/0.5D0,1.0D0,0.5D0,0.5D0,1.0D0,1.0D0,&
      & 2.5D0,0.5D0,1.0D0,1.0D0/
-!  C----->>> midlatitude winter <<<
+!----->>> midlatitude winter <<<
       DATA (DZB(N,3),N=1,10)/3.0D0,10.0D0,19.0D0,25.0D0,32.0D0,44.5D0,&
      & 50.0D0,71.0D0,98.0D0,200.0D0/
       DATA (C(N,3),N=1,11)/-3.5D0,-6.0D0,-0.5D0,0.0D0,0.4D0,3.2D0,&
      & 1.6D0,-1.8D0,-0.7D0,0.0D0,0.0D0/
       DATA (DELTA(N,3),N=1,10)/0.5D0,0.5D0,8*1.0D0/
-!  C----->>> subarctic summer <<<
+!----->>> subarctic summer <<<
       DATA (DZB(N,4),N=1,10)/4.7D0,10.0D0,23.0D0,31.8D0,44.0D0,50.2D0,&
      & 69.2D0,100.0D0,102.0D0,103.0D0/
       DATA (C(N,4),N=1,11)/-5.3D0,-7.0D0,0.0D0,1.4D0,3.0D0,0.7D0,&
      & -3.3D0,-0.2D0,3*0.0D0/
       DATA(DELTA(N,4),N=1,10)/0.5D0,0.3D0,1.0D0,1.0D0,2.0D0,1.0D0,&
      & 1.5D0,3*1.0D0/
-!
 !----->>> subarctic winter <<<
-!
       DATA (DZB(N,5),N=1,10)/1.0D0,3.2D0,8.5D0,15.5D0,25.0D0,30.0D0,&
      & 35.0D0,50.0D0,70.0D0,100.0D0/
       DATA (C(N,5),N=1,11)/3.0D0,-3.2D0,-6.8D0,0.0D0,-0.6D0,1.0D0,&
      & 1.2D0,2.5D0,-0.7D0,-1.2D0,0.0D0/
       DATA (DELTA(N,5),N=1,10)/0.4D0,1.5D0,0.3D0,0.5D0,6*1.0D0/
-!
 !----->>> us standard 1976 <<<
-!
       DATA (DZB(N,6),N=1,10)/11.0D0,20.1D0,32.1D0,47.4D0,51.4D0,71.7D0,85.7D0,90.0D0,91.0D0,92.0D0/
       DATA (C(N,6),N=1,11)/-6.5D0,0.0D0,1.0D0,2.75D0,0.0D0,-2.75D0,-1.97D0,4*0.0D0/
       DATA (DELTA(N,6),N=1,10)/0.3D0,9*1.0D0/
       DATA (TSTAR(I),I=1,6) /300.0D0,294.0D0,272.2D0,287.0D0,257.1D0,288.15D0/
-!     
+      
       NLAST=10
       DTEMP=TSTAR(LATMOS)+C(1,LATMOS)*DZ
-!
+
       DO 10 N=1,NLAST
       DEXPO=(DZ-DZB(N,LATMOS))/DELTA(N,LATMOS)
       DEXPP=DZB(N,LATMOS)/DELTA(N,LATMOS)
       DFAC=DEXP(DEXPP)+DEXP(-DEXPP)
-!
+
       IF((DABS(DEXPO)-100.0D0).LE.0.0) THEN
       DX=DEXP(DEXPO)
       DY=DX+1.0D0/DX
@@ -1697,26 +1601,23 @@
       ELSE
       DZLOG=DABS(DEXPO)
       END IF
-!
+
       IF((DEXPP-100.D0).LT.0.0) THEN
       DFACLG=DLOG(DFAC)
       ELSE
       DFACLG=DEXPP
       END IF
-!
+
       DTEMP=DTEMP+(C(N+1,LATMOS)-C(N,LATMOS))*0.5D0*(DZ+DELTA(N,LATMOS)*(DZLOG-DFACLG))
    10 CONTINUE
-!
+
       PTZQ1=DTEMP
       RETURN
       END
-!
+      
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
       DOUBLE PRECISION FUNCTION PTZQ2(P,LATMOS,QL)
-!
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       DIMENSION A(6,6),B(6,6),QS(6),PRAT(6,6),PS(6)
       DIMENSION PMIN(6),QCONST(6)
@@ -1758,13 +1659,10 @@
   200 PTZQ2=QCONST(LATMOS)*QL
       RETURN
       END
-!
+
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
       FUNCTION PTZQ3(PPP,LATMOS)
-!
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       DIMENSION P(33,6),O(33,6)
       DATA (P(I,1),I=1,33)/&
@@ -1845,6 +1743,7 @@
      & 2.4D-07,2.8D-07,3.2D-07,3.5D-07,3.8D-07,3.8D-07,3.9D-07,3.8D-07,&
      & 3.6D-07,3.4D-07,2.0D-07,1.1D-07,4.9D-08,1.7D-08,5.3D-09,4.3D-11,&
      & 4.3D-14/
+     
       PP=PPP
       PP=PP*100.0D0
       N=2

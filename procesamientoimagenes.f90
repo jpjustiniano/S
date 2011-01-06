@@ -250,16 +250,16 @@
    yf(1) = y(1)
 
     do i = 2, NX 	! Guardar coordenadas de lat y lon.
-        x(i) =  x(i-1) + 0.02
+        x(i) =  -1*(x(i-1) + 0.02)
     end do
     do j = 2, NY
-        y(j) = y(j-1) + 0.13
+        y(j) = -1*(y(j-1) + 0.13)
     end do	
     do i = 2, NXf
-        xf(i) = xf(i-1) + 0.005
+        xf(i) = -1*(xf(i-1) + 0.005)
     end do
     do j = 2, NYf
-        yf(j) = yf(j-1) + 0.0325
+        yf(j) = -1*(yf(j-1) + 0.0325)
     end do	
 
     ! Write the coordinate variable data. This will put the latitudes

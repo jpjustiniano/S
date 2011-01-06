@@ -5,6 +5,15 @@
 ! gfortran -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o transmitancia transmitancia.f90
 ! gfortran -g -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o transmitancia transmitancia.f90 Atmosphe.o Strpsrb.o Astro.o
 
+
+! Revisar:
+! 	Trabajar con variables y no matrices
+!	Revisar que pasa  con pixeles en borde donde no es procesado el pixel lateral
+!	Revisar matrices (i,j) o (j,i)
+!	Almacenaje de variables Global, Difusa y Directa, y Kt, Kd ??
+!	Calculo de Cobertura de nubes.
+
+
 !Canal 1: [1728, 9020]
 !Canal 4: [432, 2255]
 
@@ -33,10 +42,9 @@
  integer, parameter :: NDIMS = 3, NDIMS_IN	= 2     
  integer :: NX, NY, NXf, NYf, Nhora
  real, dimension(:), allocatable :: x, y, xf, yf, hora
- integer, dimension(:,:), allocatable :: CH1_out, CH4_out   ! Matrices de archivo original
+ integer, dimension(:,:), allocatable :: CH1_out, CH4_out   	! Matrices de archivo original
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
  integer, dimension(:,:), allocatable :: CH1_max, CH1_min, CH4_max,CH4_min  !  Matrices max min
- real(8), dimension(:,:), allocatable :: TCLEAR,TDIR, TCLOUD
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
@@ -64,6 +72,12 @@
  Real(8) :: T1SFC = 300.0, T2SFC = 294.0, T4SFC = 287.0, T3SFC = 272.2, T5SFC = 257.1
  real(8) :: TDIRn, TCLOUDn, TCLEARn
  integer :: LATMOS, IWP, ISUB, NCL, INTVAL
+ real(8) :: COWSR, TSRA, WSR, TSSA, TSRS, TSSS
+ real(8) :: SC0, XI0, XIM, XXKT, RSFCN, G, GLINHA, BETA, TAUW, DTAUW, DELTAW
+ real(8) :: RADGLO(5)
+ real(8), dimension(:,:), allocatable :: TCLEAR,TDIR, TCLOUD, XKT, XKD
+ real(8), dimension(:,:), allocatable :: Global, Difusa, Directa
+ 
 !********************************************************** Fin declaracion Variables
  
  
@@ -124,9 +138,16 @@
  allocate(CH4_max(NX,NY))
  allocate(CH4_min(NX,NY))
  
- allocate(TCLEAR(NX,NY))
- allocate(TDIR(NX,NY))
- allocate(TCLOUD(NX,NY))
+ allocate(TCLEAR(NXf,NYf))
+ allocate(TDIR(NXf,NYf))
+ allocate(TCLOUD(NXf,NYf))
+ allocate(XKT(NXf,NYf))
+ allocate(XKD(NXf,NYf))
+ 
+ allocate(Global(NXf,NYf))
+ allocate(Difusa(NXf,NYf))
+ allocate(Directa(NXf,NYf))
+ 
 
  ! Lectura de matrices de maximo y minimo
  call check( nf90_get_var(ncid, x_varid, x) )
@@ -199,15 +220,15 @@
 	horad = hora(rec)- dia*24
 	call diajuliano (dia, mes, ano, diaj) 
 	
-	
-	
-
 	start(3) = rec
 	
 
 	call check( nf90_get_var(ncid, CH1_varid, CH1_in, start = start, &
 						   count = countf) )						   						   
 	call check( nf90_get_var(ncid, CH4_varid, CH4_in, start, count) )
+	
+	
+	
 	
 	Do i = 1, NXf
 		Do j=1, NYf
@@ -224,7 +245,7 @@
 			albedo = albedo/1000.0
 			HR     = HR /100.0
 			
-			IF(Alt > 0. ) THEN 
+		  IF(Alt > 0. ) THEN 
 		
 			! calculation of the visibility at the station as function of visibility and altitude
 			 VIS   = vis * EXP( (LOG(100.0/vis)/1000.0)*Alt )
@@ -246,6 +267,16 @@
 			!calculate time correction
 			ZN = 0.0
 			TIMCOR = (4.0*(15.0*ZN+x(i))+ET)/60.0
+			TSOLAR = horad+TIMCOR    !para entrada com horario em UTC
+			
+			! Characteristic hour angle WI corresponding to the W1-W2 interval
+			WSOLAR    = (12.00 - TSOLAR)*15.
+			COWI  = COS(WSOLAR*CDR)
+			
+			! Characteristic solar zenith angle THETA (o)
+			COSZEN = SIDEC*SILAT + CODEC*COLAT*COWI
+			THETA  = ACOS(COSZEN)/CDR
+			
 			
 			! Fixed input parameters for subroutine strpsrb
 			ROFF   = 0.0		!     ROFF    : difference in water vapor
@@ -257,61 +288,115 @@
 			CLOLWC = 0.0		!     CLOLWC  : cloud liquid water content
 			
 			! Choose atmosphere by surface temperature
-
-			IF (temp.LT.297.0 .AND. temp.GE.290.5) THEN
+			IF (temp < 297.0 .AND. temp > 290.5) THEN
 				LATMOS = 2
 				TS     = temp - T2SFC
-			Else if (temp.LT.290.5 .AND. temp.GE.279.5) THEN
+			Else if (temp < 290.5 .AND. temp > 279.5) THEN
 				LATMOS = 4
 				TS     = temp - T4SFC
-			Else IF(temp.LT.279.5 .AND. temp.GE.264.5) THEN
+			Else IF(temp < 279.5 .AND. temp > 264.5) THEN
 				LATMOS = 3
 				TS     = temp - T3SFC
-			Else IF(temp.LT.264.5) THEN
+			Else IF(temp < 264.5) THEN
 				LATMOS = 5
 				TS     = temp - T5SFC
 			Else
 				LATMOS = 1
 				TS     = Temp - T1SFC
-			ENDIF
-			
-			
-			TSOLAR = horad+TIMCOR    !para entrada com horario em UTC
-			
-			! Characteristic hour angle WI corresponding to the W1-W2 interval
-			WSOLAR    = (12.00 - TSOLAR)*15.
-			COWI  = COS(WSOLAR*CDR)
-			
-			! Characteristic solar zenith angle THETA (o)
-			COSZEN = SIDEC*SILAT + CODEC*COLAT*COWI
-			THETA  = ACOS(COSZEN)/CDR
+			end if
 			
 			! Subroutine STRPSRB - calculate transmittance for clear sky
 			! input  - LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,ISUB,TAUW,TOP,NCL,INTVAL,WH2O,CLOLWC,CDR
 			! output - TRANS
-			If(Theta .LE. 90) then
-				CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,0,IWP,ISUB,&	
+			CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,0,IWP,ISUB,&	
 				&     0.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLEARn,TDIRn)
-				TCLEAR(i,j) =TCLEARn
-				TDIR(i,j) = TDIRn
+			TCLEAR(i,j) =TCLEARn
+			TDIR(i,j) = TDIRn
 				
-				CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,1,IWP,ISUB,&	
+			CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,1,IWP,ISUB,&	
 				&    100.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLOUDn,TDIRn)
-				TCLOUD(i,j) =TCLOUDn
+			TCLOUD(i,j) =TCLOUDn
 			
+			! Calculo de irradiancia global, difusa y direta a partir de transmitancias calculadas.
+			! calculate time for sunrise
+			COWSR = -1.0*TAN(DECR)*TAN(YLATR)
+			if (COWSR .LT. -1.0) then
+				write(*,*) ' NO SUNSET   NO SUNRISE: 24 HOUR INSOLATION'
+				TSRA  =  0.0
+			else if (COWSR .GT. 1.0) then
+				write(*,*) ' DARK SIDE OF THE EARTH  NO INSOLATION'
+			else	
+				WSR   = ACOS(COWSR)/CDR
+				TSRA  = 12.00 - WSR/15.
+			End if  
+		  
+			! calculate hours of start and end of day
+			TSSA  = 24.0-TSRA
+			TSRS  = TSRA - TIMCOR
+			TSSS  = TSSA - TIMCOR
+			
+			SC0  = 1368.00
+			XI0   = SC0*E0*COSZEN
+			
+			RADGLO(1)  =  COSZEN
+			RADGLO(2)  =  XIM
+			RADGLO(4)  =  XI0
+			RADGLO(5)  =  THETA
+			
+			!calculate Global radiation 
+			Global(i,j)  = XI0 *((1.0 - XIM) * (TCLEAR(i,j) - TCLOUD(i,j)) + TCLOUD(i,j))
+			if (Global(i,j) < 0.0)  Global(i,j) = 0.
+			XXKT=Global(i,j)/XI0
+			
+			!calculate Diffuse radiation 
+			G = 0.85 						! cloud asymmetry parameter
+			GLINHA = (G - G*G)/(1 - G*G)	! corrected G
+			BETA = 0.5 - 3.*GLINHA/8. - 7.*GLINHA**3/128. - 9.*GLINHA**5/128. ! cloud backscatter coefficient
+			Difusa (i,j) = 0.0							! diffuse radiation
+			XIM = 1.0 - XIM					! cloud cover coefficient from satellite data
+			
+			IF ((XIM >= 0.95).AND.(XIM < 1.01)) THEN
+				TAUW = 1.0
+				DELTAW = (1 - TAUW)/(BETA * TAUW)
+				DTAUW = DEXP(-DELTAW)
+			ELSEIF((XIM < 0.95).AND.(XIM >= 0.)) THEN
+				TAUW = XIM + 0.05
+				DELTAW = (1 - TAUW)/(BETA * TAUW)
+				DTAUW = DEXP(-DELTAW)
+			ELSE
+				DTAUW = -1.0
+			END IF
+			
+			IF(DTAUW > 0.0) THEN ! teoricamente esta expressão é multiplicada por coszen
+				Directa(i,j) = DTAUW * TDIR(i,j) * XI0
+				Difusa (i,j) = Global(i,j) - Directa(i,j)
+			ELSE
+				Directa(i,j)=-2000.0
+				Difusa (i,j)=-2000.0
+			ENDIF
+			
+			IF(Directa(i,j).LT.0.0) Directa(i,j) = 0.0
+			
+			XKT(I,J)=XXKT
+			if(XXKT.LT.0.0) then
+				XKD(I,J)=XXKT
 			else
-				TCLEAR(i,j) = -2.0
-				TDIR(i,j) = -2.0
-				TCLOUD(i,j) = -2.0
-				
-			end if
-
+				XKD(I,J)=Difusa(i,j)*XXKT/Global(i,j)
+				if (XKD(I,J) > XKT(I,J)) XKD(I,J) = XKT(I,J)
+			End if
+			
+			IF (XKD(I,J) > XKT(I,J)) XKD(I,J) = XKT(I,J)
+		
+			
 			
 			Else  ! Si esta fuera de territorio Chileno.
+				
 				TCLEAR(i,j) = -1.0
 				TDIR(i,j) = -1.0
 				TCLOUD(i,j) = -1.0
-			End if
+		  
+			End if  ! Fin de procesamiento de pixel con altura > 0.
+		
 		End do
 		print *,i
 	End do
