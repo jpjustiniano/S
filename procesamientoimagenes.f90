@@ -34,7 +34,7 @@
  Integer :: errorread
  character (4) :: ano
  character (2) :: mes, cdia, hora, minu
- character (2) :: foto
+ character (10) :: foto
  character(8)  :: fecha
  real :: iano, imes, idia, ihora, ihorat, iminu, imesp=0., diaj, hora_utc
  Integer :: ifoto					! 1:media_hora; 2:south_full
@@ -147,7 +147,7 @@
  READ (minu,'(F2.0)') iminu
  ihora = ihora + iminu/60.
 
- If (foto=='media_hora') then ! no funciona
+ If (foto=='media_hora') then
     ifoto = 1
  ElseIf (foto=='south_full') then
     ifoto = 2
@@ -249,22 +249,22 @@
     call check( nf90_enddef(ncid) )
     !*********************************************************************** Fin Definiciones NetCDF	
    
-   x(1) = -65.
-   y(1) = -20. 
-   xf(1) = x(1)
-   yf(1) = y(1)
+   x(1) = -66.
+   y(1) = -17. 
+   xf(1) = -66.
+   yf(1) = -17. 
 
     do i = 2, NX 	! Guardar coordenadas de lat y lon.
-        x(i) =  x(i-1) - 0.02)
+        x(i) =  x(i-1) - 0.02
     end do
     do j = 2, NY
-        y(j) = y(j-1) - 0.13
+        y(j) = y(j-1) - 0.0624
     end do	
     do i = 2, NXf
         xf(i) = xf(i-1) - 0.005
     end do
     do j = 2, NYf
-        yf(j) = yf(j-1) - 0.0325)
+        yf(j) = yf(j-1) - 0.0156
     end do	
 
     ! Write the coordinate variable data. This will put the latitudes

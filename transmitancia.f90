@@ -10,7 +10,7 @@
 ! 	Trabajar con variables y no matrices
 !	Revisar que pasa  con pixeles en borde donde no es procesado el pixel lateral
 !	Revisar matrices (i,j) o (j,i)
-!	Almacenaje de variables Global, Difusa y Directa, y Kt, Kd ??
+!	Almacenaje de variables Global, Difusa y Directa. Kt, Kd en matris interna.
 !	Calculo de Cobertura de nubes.
 
 
@@ -152,6 +152,8 @@
  ! Lectura de matrices de maximo y minimo
  call check( nf90_get_var(ncid, x_varid, x) )
  call check( nf90_get_var(ncid, y_varid, y) )
+ call check( nf90_get_var(ncid, xf_varid, xf) )
+ call check( nf90_get_var(ncid, yf_varid, yf) )
  call check( nf90_get_var(ncid, CH1_max_varid, CH1_max) )
  call check( nf90_get_var(ncid, CH1_min_varid, CH1_min) )
  call check( nf90_get_var(ncid, CH4_max_varid, CH4_max) )
@@ -177,13 +179,13 @@
  
  call check( nf90_create(filename_out,NF90_64BIT_OFFSET, ncid_rad) ) ! ncid, archivo de salida recortado
  ! Dimensiones
- call check( nf90_def_dim(ncid_rad, "x", NX, x_dimid_rad) )  ! Define the dimensions. 
- call check( nf90_def_dim(ncid_rad, "y", NY, y_dimid_rad) )
+ call check( nf90_def_dim(ncid_rad, "x", NXf, x_dimid_rad) )  ! Define the dimensions. 
+ call check( nf90_def_dim(ncid_rad, "y", NYf, y_dimid_rad) )
  call check( nf90_def_dim(ncid_rad, "hora", Nhora, hora_dimid_rad) )
  ! Variables
- call check( nf90_def_var(ncid_rad,"x", NF90_SHORT, x_dimid_rad, x_varid_rad) )	! Define the coordinate variables
- call check( nf90_def_var(ncid_rad,"y", NF90_SHORT, y_dimid_rad, y_varid_rad) )	! 32 bit
- call check( nf90_def_var(ncid_rad,"hora", NF90_SHORT, hora_dimid_rad, hora_varid_rad) ) ! 32 bit    
+ call check( nf90_def_var(ncid_rad,"x", NF90_FLOAT, x_dimid_rad, x_varid_rad) )	! Define the coordinate variables
+ call check( nf90_def_var(ncid_rad,"y", NF90_FLOAT, y_dimid_rad, y_varid_rad) )	! 32 bit
+ call check( nf90_def_var(ncid_rad,"hora", NF90_FLOAT, hora_dimid_rad, hora_varid_rad) ) ! 32 bit    
 
  dimids =  (/ x_dimid_rad, y_dimid_rad, hora_dimid_rad /) ! The dimids array is used to pass the IDs of the dimensions
  dimids2d =  (/ x_dimid_rad, y_dimid_rad/)
@@ -228,9 +230,10 @@
 	call check( nf90_get_var(ncid, CH4_varid, CH4_in, start, count) )
 	
 	
-	
+	print *,'rec: ',rec
 	
 	Do i = 1, NXf
+		print *,i,'/',NXf
 		Do j=1, NYf
 			! Lectura de archivo con valores de temperatura, HR, vis., albedo y altura, lat y long.
 			! En funcion del archivo de altura se procesa o no el pixel.
@@ -246,23 +249,25 @@
 			HR     = HR /100.0
 			
 		  IF(Alt > 0. ) THEN 
-		
+			! Calculo de Cobertura de nubes.
+			XIM =  (CH1_in(i,j)-CH1_max(i,j))/float( (CH1_min(i,j)-CH1_max(i,j)) ) 
+			
 			! calculation of the visibility at the station as function of visibility and altitude
-			 VIS   = vis * EXP( (LOG(100.0/vis)/1000.0)*Alt )
+			 vis   = vis * EXP( (LOG(100.0/vis)/1000.0)*Alt )
 			! test for visibility between 2 and 150 km
-			 IF (VIS .GT. 150.)  VIS = 150.
-			 IF (VIS .LT.   2.)  VIS =   2.
+			 IF (VIS > 150.)  VIS = 150.
+			 IF (VIS <   2.)  VIS =   2.
 			 
 			! subroutine ASTRO - calculation of eccentricity correction, declination an equation of time
 			! input: JDAY ; output: E0,DEC,ET
 			CALL ASTRO(diaj,E0,DEC,ET) 
 			
 			DECR = DEC*cdr
-			YLATR= y(j)*cdr
-			CODEC = COS(DECR)
-			COLAT = COS(YLATR)
-			SIDEC = SIN(DECR)
-			SILAT = SIN(YLATR)
+			YLATR= yf(j)*cdr
+			CODEC = cos(DECR)
+			COLAT = cos(YLATR)
+			SIDEC = sin(DECR)
+			SILAT = sin(YLATR)
 			
 			!calculate time correction
 			ZN = 0.0
@@ -317,14 +322,14 @@
 				&    100.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLOUDn,TDIRn)
 			TCLOUD(i,j) =TCLOUDn
 			
-			! Calculo de irradiancia global, difusa y direta a partir de transmitancias calculadas.
+			! Calculo de irradiancia global, difusa y directa a partir de transmitancias calculadas.
 			! calculate time for sunrise
 			COWSR = -1.0*TAN(DECR)*TAN(YLATR)
 			if (COWSR .LT. -1.0) then
-				write(*,*) ' NO SUNSET   NO SUNRISE: 24 HOUR INSOLATION'
+				write(*,*) ' No sunset, No Sunrise: 24 hr insolation', i, j, xf(i), yf(j), XIM 
 				TSRA  =  0.0
 			else if (COWSR .GT. 1.0) then
-				write(*,*) ' DARK SIDE OF THE EARTH  NO INSOLATION'
+				write(*,*) ' Dark side of the earth, no insolation', i, j, xf(i), yf(j), XIM 
 			else	
 				WSR   = ACOS(COWSR)/CDR
 				TSRA  = 12.00 - WSR/15.
@@ -390,27 +395,26 @@
 			
 			
 			Else  ! Si esta fuera de territorio Chileno.
-				
-				TCLEAR(i,j) = -1.0
-				TDIR(i,j) = -1.0
-				TCLOUD(i,j) = -1.0
+				Directa(i,j) = -1.0
+				Difusa (i,j) = -1.0
+				Global(i,j)  = -1.0
 		  
 			End if  ! Fin de procesamiento de pixel con altura > 0.
 		
 		End do
-		print *,i
 	End do
 	
-	print *,'rec: ',rec
-	
-	call check( nf90_put_var(ncid_rad, Global_varid, TCLEAR))
-	call check( nf90_put_var(ncid_rad, Difusa_varid, TCLOUD))
-	call check( nf90_put_var(ncid_rad, Directa_varid, TDIR))
+	call check( nf90_put_var(ncid_rad, Global_varid, Global))
+	call check( nf90_put_var(ncid_rad, Difusa_varid, Difusa))
+	call check( nf90_put_var(ncid_rad, Directa_varid,Directa))
 	
  End do
  
  call check( nf90_close(ncid_rad) )
  
+ call date_and_time(DATE=fecha, VALUES=tiempof)
+ write (*,*) '   Tiempo procesamiento: ', tiempof (5) - tiempo (5) ,"horas", tiempof (6) - tiempo (6),"min.", &
+					& tiempof (7) - tiempo (7), "sec."
  
  999 Stop
  
