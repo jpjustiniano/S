@@ -10,6 +10,11 @@
 ! Coordinar las variables de entrada en las mismas coordenadas
 ! Procesamiento de solo Chile. Eliminar fuera de fronteras.
 
+! Revisar:
+! Calculo de angulo de elevacion
+! Almacenado de informacion.
+
+
 !Canal 1: [1728, 9020]
 !Canal 4: [432, 2255]
 
@@ -191,10 +196,10 @@
     call check( nf90_def_dim(ncid, "dia", dia,  dia_dimid) )
     call check( nf90_def_dim(ncid, "hora", NF90_UNLIMITED, hora_dimid) )
     ! Variables
-    call check( nf90_def_var(ncid,"x", NF90_SHORT, x_dimid, x_varid) )	! Define the coordinate variables
-    call check( nf90_def_var(ncid,"y", NF90_SHORT, y_dimid, y_varid) )	! 32 bit
-    call check( nf90_def_var(ncid,"xf", NF90_SHORT, xf_dimid, xf_varid) )	
-    call check( nf90_def_var(ncid,"yf", NF90_SHORT, yf_dimid, yf_varid) )
+    call check( nf90_def_var(ncid,"x", NF90_FLOAT, x_dimid, x_varid) )	! Define the coordinate variables
+    call check( nf90_def_var(ncid,"y", NF90_FLOAT, y_dimid, y_varid) )	! 32 bit
+    call check( nf90_def_var(ncid,"xf", NF90_FLOAT, xf_dimid, xf_varid) )	
+    call check( nf90_def_var(ncid,"yf", NF90_FLOAT, yf_dimid, yf_varid) )
     call check( nf90_def_var(ncid,"hora", NF90_FLOAT, hora_dimid, hora_varid) ) ! 32 bit   
 
     dimids =  (/ x_dimid, y_dimid, hora_dimid  /) ! The dimids array is used to pass the IDs of the dimensions
@@ -204,8 +209,8 @@
 	
     call check( nf90_def_var(ncid, "CH1", NF90_SHORT, dimids_fine, CH1_varid) )  ! Define the variable and type. 
     call check( nf90_def_var(ncid, "CH4", NF90_SHORT, dimids, CH4_varid) )		!  NF90_Short (2-byte integer)
-    call check( nf90_def_var(ncid, "CH1_max", NF90_SHORT, dimids2df, CH1_max_varid) )
-    call check( nf90_def_var(ncid, "CH1_min", NF90_SHORT, dimids2df, CH1_min_varid) )
+    call check( nf90_def_var(ncid, "CH1_max", NF90_FLOAT, dimids2df, CH1_max_varid) )
+    call check( nf90_def_var(ncid, "CH1_min", NF90_FLOAT, dimids2df, CH1_min_varid) )
     call check( nf90_def_var(ncid, "CH4_max", NF90_SHORT, dimids2d, CH4_max_varid) )
     call check( nf90_def_var(ncid, "CH4_min", NF90_SHORT, dimids2d, CH4_min_varid) )
 
@@ -244,22 +249,22 @@
     call check( nf90_enddef(ncid) )
     !*********************************************************************** Fin Definiciones NetCDF	
    
-   x(1) = 65.
-   y(1) = 20. 
+   x(1) = -65.
+   y(1) = -20. 
    xf(1) = x(1)
    yf(1) = y(1)
 
     do i = 2, NX 	! Guardar coordenadas de lat y lon.
-        x(i) =  -1*(x(i-1) + 0.02)
+        x(i) =  x(i-1) - 0.02)
     end do
     do j = 2, NY
-        y(j) = -1*(y(j-1) + 0.13)
+        y(j) = y(j-1) - 0.13
     end do	
     do i = 2, NXf
-        xf(i) = -1*(xf(i-1) + 0.005)
+        xf(i) = xf(i-1) - 0.005
     end do
     do j = 2, NYf
-        yf(j) = -1*(yf(j-1) + 0.0325)
+        yf(j) = yf(j-1) - 0.0325)
     end do	
 
     ! Write the coordinate variable data. This will put the latitudes
