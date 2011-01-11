@@ -7,7 +7,7 @@
 !               1 - tropical
 !               2 - midlatitude summer
 !               3 - midlatitude winter
-!               4 - subarti! summer
+!               4 - subartic summer
 !               5 - subartic winter
 !     TS      : difference between surface and characteristical temperatures
 !     ROFF    : difference in water vapor
@@ -585,13 +585,13 @@
 !              100.0 - with clouds 
 !     TOP     : cloud top (mbar)
 !     NCL     : number of cloud layers
-!     CLOLW!  : cloud liquid water content
+!     CLOLWC  : cloud liquid water content
 !     DZ      : thickness of each atmospheric layer
 !     NLAY    : number of atmospheric layers
 !     LCLOUD  : logical variable to calculate with or without clouds
 !     PRESS   : atmospheric pressure (mbar)
 !     TEMP    : temperature (oC)
-!     IGO     : flag for CLOLW! greater than limits
+!     IGO     : flag for CLOLWC greater than limits
 !     K1      :
 !     ALW     :
 !     FLW     :
@@ -608,7 +608,7 @@
 !     CLIM    :
 !     EXMASS  :
 !     EWOL    :
-!     FIXLW!  :
+!     FIXLWC  :
 !     IWO     :
 !     KWO     :
 !......................................................................
@@ -1423,7 +1423,7 @@
         BT0  = BET0(I)
         OMEG = OM  (I)
         HH   = DBLE(0.9999999)
-       OMEG = DMIN1(OMEG,HH)
+        OMEG = DMIN1(OMEG,HH)
         HMH  = DBLE(0.0000001)
         OMEG = DMAX1(OMEG,HMH)
         A1   = (1.-OMEG*(1.-BT)) * UMUE
@@ -1451,7 +1451,8 @@
       AM2(N) =   (1.-ALDIF*F(NLY)) * XH(NLY)
       S(N)   =   ((Y(NLY)*ALDIF-X(NLY)) * WU  +  ALDR) * DIR(ISS)
       S(1)   =  -Y(1)
-      DO 20  L = 2 , NLY
+      
+	  DO 20  L = 2 , NLY
         LA      =   2*L-1
         LB      =   2*L-2
         AM1(LB) =   D(L-1)*G(L-1)

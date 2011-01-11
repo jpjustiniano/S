@@ -50,19 +50,19 @@
  ! Variables NETCDF 
  integer :: ncid, ncid_in, dia =31, status
  integer, parameter :: NDIMS = 3, NDIMS_IN = 2	      ! We are writing 2D data.
- integer, parameter :: NX = 526, NY = 432 , NXf = 2101, NYf = 1728 
+ integer, parameter :: NX = 250, NY = 432 , NXf = 1000, NYf = 1728 ! NX = 526, NY = 432 , NXf = 2101, NYf = 1728 
 
  real :: x(NX), y(NY), xf(NXf), yf(NYf)
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out   ! Matrices de archivo original
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
- real, dimension(:,:), allocatable :: CH1_max, CH1_min, CH4_max,CH4_min  !  Matrices max min
+ real, dimension(:,:), allocatable :: CH1_max, CH1_min  !  Matrices max min
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
  integer :: CH1_varid, Ch4_varid
- integer :: CH1_max_varid, CH1_min_varid, CH4_max_varid, CH4_min_varid
+ integer :: CH1_max_varid, CH1_min_varid
  
- integer :: start(NDIMS_IN), start_fine(NDIMS_IN), count(NDIMS_IN), count_fine(NDIMS_IN), start_hora(1)
+ integer :: start(NDIMS), startf(NDIMS), count(NDIMS), countf(NDIMS), start_hora(1)
  integer :: dimids(NDIMS), dimids_fine(NDIMS), dimids2d(NDIMS_IN), dimids2df(NDIMS_IN)
    
  allocate(CH1_out (9020, 1728))   ! Allocate memory for data.
@@ -72,12 +72,8 @@
  
  allocate(CH1_max(NXf,NYf))
  allocate(CH1_min(NXf,NYf))
- allocate(CH4_max(NX,NY))
- allocate(CH4_min(NX,NY))
  CH1_max = 0
  CH1_min = 10000
- CH4_max = 0
- CH4_min = 10000 
 !********************************************************** Fin declaracion Variables
  
  print *
@@ -117,8 +113,6 @@
     
     call check( nf90_put_var(ncid, CH1_max_varid, CH1_max) )
     call check( nf90_put_var(ncid, CH1_min_varid, CH1_min) )
-    call check( nf90_put_var(ncid, CH4_max_varid, CH4_max) )
-    call check( nf90_put_var(ncid, CH4_min_varid, CH4_min) )
         
 	call check( nf90_close(ncid) )
 	
@@ -211,8 +205,6 @@
     call check( nf90_def_var(ncid, "CH4", NF90_SHORT, dimids, CH4_varid) )		!  NF90_Short (2-byte integer)
     call check( nf90_def_var(ncid, "CH1_max", NF90_FLOAT, dimids2df, CH1_max_varid) )
     call check( nf90_def_var(ncid, "CH1_min", NF90_FLOAT, dimids2df, CH1_min_varid) )
-    call check( nf90_def_var(ncid, "CH4_max", NF90_SHORT, dimids2d, CH4_max_varid) )
-    call check( nf90_def_var(ncid, "CH4_min", NF90_SHORT, dimids2d, CH4_min_varid) )
 
     ! Assign units attributes to coordinate variables.
     call check( nf90_put_att(ncid, x_varid, "units", "degrees_north"))
@@ -282,6 +274,11 @@
  rec = rec + 1 
  start_hora =(/1/)
  start_hora(1) = rec
+ count = (/ NX, NY, 1 /)
+ countf = (/ NXf, NYf, 1 /)
+ start = (/ 1, 1, 1 /)
+ start(3) = rec
+ 
  ihorat = (ihora + idia*24)  ! Hora (hr_mes*100)
  call check( nf90_put_var(ncid, hora_varid, ihorat, start_hora)  )  ! Graba hora
  call check( nf90_open(trim(filename), nf90_nowrite, ncid_in) )  ! Abre archivo de lectura, ncid_in
@@ -294,8 +291,8 @@
  call check( nf90_get_var(ncid_in, CH1_in_varid, CH1_out))  
  
  ! Recorte de imagenes
- CH4_in = CH4_out(925:1450,:)
- CH1_in = CH1_out(3700:5800,:)
+ CH4_in = CH4_out(1100:1350,:)!925:1450
+ CH1_in = CH1_out(4400:5400,:)!3700:5800
  
  ! Correccion de datos 
  do i = 1, NXf
@@ -326,13 +323,7 @@
 end do
  
  do i = 1, NX
-    do j = 1, NY
-		if (CH4_in(i,j) > CH4_max(i,j)) then
-			CH4_max(i,j) = CH4_in(i,j)
-		end if
-		if (CH4_in(i,j) < CH4_min(i,j)) then
-			CH4_min(i,j) = CH4_in(i,j)
-		end if    
+    do j = 1, NY 
 		if (CH4_in(i,j) > 15000) then
             write (16,*) "CH4_in(", i, ",",j, ") =", CH4_in(i, j) , filename, iano,diaj,ihora,"Corregido, vecinos"
    			CH4_in(i,j) = (CH4_in(i+1,j)+CH4_in(i,j+1)+CH4_in(i-1,j)+CH4_in(i,j-1))/4.
@@ -352,8 +343,9 @@ end do
  end do
  
  ! Guardado de matriz recortada y revisada
- call check( nf90_put_var(ncid,CH4_varid, CH4_in))
- call check( nf90_put_var(ncid,CH1_varid, CH1_in))
+ call check( nf90_put_var(ncid,CH4_varid, CH4_in, start = start, &
+									count = count) )
+ call check( nf90_put_var(ncid,CH1_varid, CH1_in, start, countf))
  call check( nf90_close(ncid_in) )
  
  write (*,*) '   ',cdia,'  ', hora,':', minu
