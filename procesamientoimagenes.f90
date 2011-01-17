@@ -25,7 +25,7 @@
 !Canal 4_SI: [1, 925]
 !Canal 4_ID: [432, 1450]
 
- Program ProcesamientoImagenes
+ Program ProcesamientoImagenes_media_hora
  use netcdf
  implicit none
  
@@ -46,11 +46,13 @@
  integer :: i=1,j=1, rec=1, noct= 0
  logical :: flag1= .false.
  integer,dimension(8) :: tiempo, tiempof
+ integer, parameter :: r4i = 1095, r4f = 1368 , r1i = r4i*4, r1f = r4f*4 ! CH1: 4380 a 5472
+ 
  
  ! Variables NETCDF 
  integer :: ncid, ncid_in, dia =31, status
  integer, parameter :: NDIMS = 3, NDIMS_IN = 2	      ! We are writing 2D data.
- integer, parameter :: NX = 250, NY = 432 , NXf = 1000, NYf = 1728 ! NX = 526, NY = 432 , NXf = 2101, NYf = 1728 
+ integer, parameter :: NLat= 432, Nlon= 2255, NX = 250, NY = 432 , NXf = 1000, NYf = 1728 ! NX = 526, NY = 432 , NXf = 2101, NYf = 1728 
 
  real :: x(NX), y(NY), xf(NXf), yf(NYf)
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out   ! Matrices de archivo original
@@ -66,14 +68,14 @@
  integer :: dimids(NDIMS), dimids_fine(NDIMS), dimids2d(NDIMS_IN), dimids2df(NDIMS_IN)
    
  allocate(CH1_out (9020, 1728))   ! Allocate memory for data.
- allocate(CH4_out (2255,432))     ! Lectura de variables de archivo original
+ allocate(CH4_out (Nlon,NLat))     ! Lectura de variables de archivo original
  allocate(CH1_in (NXf,NYf))       ! imagenes invertidas
  allocate(CH4_in(NX,NY))
  
  allocate(CH1_max(NXf,NYf))
  allocate(CH1_min(NXf,NYf))
- CH1_max = 0
- CH1_min = 10000
+ CH1_max = 0.
+ CH1_min = 20000.
 !********************************************************** Fin declaracion Variables
  
  print *
@@ -291,18 +293,20 @@
  call check( nf90_get_var(ncid_in, CH1_in_varid, CH1_out))  
  
  ! Recorte de imagenes
- CH4_in = CH4_out(1100:1350,:)!925:1450
- CH1_in = CH1_out(4400:5400,:)!3700:5800
+ CH4_in = CH4_out(r4i:r4f,:430)!925:1450
+ CH1_in = CH1_out(r1i:r1f,:1720)!3700:5800
  
- ! Correccion de datos 
+ ! Revision de matriz
  do i = 1, NXf
     do j = 1, NYf
+		! Calculo de maximo y minimo mensual
 		if (CH1_in(i,j) > CH1_max(i,j)) then
 			CH1_max(i,j) = CH1_in(i,j)
-		end if
+		end if 								!Separado por si es una imagen, junto es mas rapido.
 		if (CH1_in(i,j) < CH1_min(i,j)) then
 			CH1_min(i,j) = CH1_in(i,j)
 		end if
+		! Correccion de datos 
 		if (CH1_in(i,j) > 15000) then
             write (16,*) "CH1_in(", i, ",",j, ") =", CH1_in(i, j) , filename, iano,diaj,ihora,"Corregido, vecinos"
    			CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i,j+1)+CH1_in(i-1,j)+CH1_in(i,j-1))/4.
@@ -364,7 +368,7 @@ end do
  end subroutine check
  
  
- End Program ProcesamientoImagenes
+ End Program ProcesamientoImagenes_media_hora
 
 !*********************************************************************** /Main
 

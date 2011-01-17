@@ -1,7 +1,5 @@
 !     calculate transmittance for clear and cloudy sky
-      SUBROUTINE STRPSRB(LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,&
-      ISUB,TAUW,TOP,NCL,INTVAL,tstat,rf,zstat,CLOLWC,CDR,TRANS,TDIR)
-
+SUBROUTINE STRPSRB(LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,ISUB,TAUW,TOP,NCL,INTVAL,tstat,rf,zstat,CLOLWC,CDR,TRANS,TDIR)
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !     LATMOS  : atmosphere type
 !               1 - tropical
@@ -91,18 +89,16 @@
       PARAMETER (LEVMAX = 51, LAYMAX = 50,MAXWEL=37 , MAXIND= 135)
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
 
-      DIMENSION U(LAYMAX,MAXIND),V(LAYMAX,MAXIND)
-      DIMENSION INAERO(LAYMAX),ASIG(LAYMAX,MAXWEL)
-      DIMENSION SCA(LEVMAX),RAY(LEVMAX)
-      DIMENSION DOWN(LEVMAX),DIR(LEVMAX),DIF(LEVMAX),TEMP(LEVMAX),PRESS(LEVMAX),ALT(LEVMAX),ROL(LEVMAX),&
-     &  ROH(LEVMAX),RO3(LEVMAX),DIRS(LEVMAX),DIFS(LEVMAX)
-      DIMENSION DZ(LAYMAX),TW(LAYMAX),TAU(LAYMAX),TOHNW(LAYMAX), BET(LAYMAX),BET0(LAYMAX),OM(LAYMAX)
-      DIMENSION SOL(MAXIND),INDEX(MAXIND)
-      DIMENSION IH(113),INTVA(8),INTVE(8)
-      DIMENSION WH2O1(LAYMAX)
-      DIMENSION WCO2SW(LAYMAX),WO3SW(LAYMAX),WO2SW(LAYMAX),RAYM(LAYMAX)
-
+      real(8), dimension(LAYMAX,MAXIND) :: U,V
+      real(8), dimension(LAYMAX,MAXWEL) :: ASIG
+      real(8), dimension (LEVMAX) :: SCA, RAY
+      real(8), dimension (LEVMAX) :: DOWN,DIR,DIF,TEMP,PRESS,ALT,ROL,ROH,RO3,DIRS,DIFS
+      real(8), dimension (LAYMAX) :: DZ,TW,TAU,TOHNW,BET,BET0,OM, INAERO
+      real(8), dimension (MAXIND) :: SOL,INDEX
+      real(8) :: IH(113),INTVA(8),INTVE(8)
+      real(8), dimension (LAYMAX) :: WH2O1, WCO2SW, WO3SW, WO2SW, RAYM
       LOGICAL* 1 LCLOUD
+      
       DATA IH / 5*23, 3*24, 25, 5*26, 27, 8*28, 29, 9*30, 31, 10*32, 2*33, 20*34, 35, 36*36, 10*37 /
       DATA INTVA / 20, 16,  1,  0,  0,  0,  0,  1/
       DATA INTVE / 29, 30, 37,  0,  0,  0,  0, 37/
@@ -124,11 +120,10 @@
 
 !     calculation of the precitable water as function of relative
 !     humidity, partial pressure of water vapor and temperature
-      XD=287.05/1005.0
       PSTAT = 1013.25*EXP(-0.0001184*ZSTAT)
       PVSAT = EXP(26.23 - 5416.0/TSTAT)/100.0
       WMIXRAT=0.622*RF*PVSAT/1013.25
-      XM=(1.0-0.26*WMIXRAT)*XD              
+      XM=(1.0-0.26*WMIXRAT)*287.05/1005.0             
       TNEW=TSTAT*((PSTAT/1013.25)**XM)      
       PVSAT = EXP(26.23 - 5416.0/TNEW)      
       WH2O  = 0.493*RF*PVSAT/TNEW           
@@ -149,17 +144,14 @@
 ! input  - NCL,NLAY,TOP,IWP,LCLOUD,CLOLWC,DZ,TEMP,PRESS
 ! output - NCL,IGO,TAUW,TW,K1
 		CALL WOLKE1(NCL,NLAY,IGO,TOP,TAUW,IWP,LCLOUD,CLOLWC, DZ,TEMP,PRESS,TW,K1)
-
       ELSE
-
 ! Subroutine WOLKE2 - determination of clouds properties, input is TAUW                       
 ! input  - NCL,NLAY,TOP,TAUW,IWP,LCLOUD,DZ,TEMP,PRESS
 ! output - NCL,CLOLWC,TW,K1
          CALL WOLKE2(NCL,NLAY,TOP,TAUW,IWP,LCLOUD,CLOLWC, DZ,TEMP,PRESS,TW,K1)
       END IF
-!
+
       IF(IGO.NE.1) RETURN
-!
 !......................................................................
 ! Subroutine VARIA - changes atmospheric profiles
 ! input  - RAY,NCL,NLAY,TS,ROFF,WH2O,K1,LCLOUD,DZ,TEMP,PRESS,ROL,ROH,RO3
@@ -181,22 +173,21 @@
       
 !     condition to avoid that some parts of the map be in the night      
       IF(COSZEN.LT.0.01) COSZEN=0.01
-      DO 30  I=1,LEVMAX
-        DIR(I)    = 0.
-        DIF(I)    = 0.
-        DOWN(I)   = 0.
-        DIRS(I)   = 0.
-        DIFS(I)   = 0.
-   30 CONTINUE
+        DIR   = 0.
+        DIF   = 0.
+        DOWN  = 0.
+        DIRS  = 0.
+        DIFS  = 0.
+
 
 !.....loop spectral intervals..........................................
       IBEG = INTVA(INTVAL)  
       ISTO = INTVE(INTVAL)
       IF(IBEG.EQ.0.AND.ISTO.EQ.0) GOTO 100
 
-      DO 40 IALL = 1,135
+      DO 40 IALL = 1, 135
 	     IDO = INDEX(IALL)
-      IF(IDO.LT.IBEG.OR.IDO.GT.ISTO) GOTO 40
+      IF(IDO.LT.IBEG .OR. IDO.GT.ISTO) GOTO 40
 
       NLA = NLEV
       NLY = NLAY
@@ -242,8 +233,7 @@
 !   layer boundary for the wave-length interval IALL.      
 !   The true fluxes are obtained by multiplication with the 
 !   spectral solar constant (input from <LESEN>)  SOL .     
-!.......................................................................
-!                                                           
+!.......................................................................                                                
 !   for each boundary NLA spectral integrated quantities 
 !     DIF  : downward diffuse flux                     
 !     DIR  : downward direct flux                           
@@ -319,15 +309,16 @@
 !     X       :
 !......................................................................
 
-      PARAMETER (LEVMAX = 51, LAYMAX = 50, MAXWEL= 37, MAXIND= 135)
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-
-      DIMENSION RAYL(LEVMAX),SCAL(LEVMAX)
-      DIMENSION RAY(LEVMAX),SCA(LEVMAX)
-      DIMENSION TEMP(LEVMAX),PRESS(LEVMAX),ALT(LEVMAX),ROL(LEVMAX),ROH(LEVMAX),RO3(LEVMAX)
-      DIMENSION DZ(LAYMAX)
-      DIMENSION SOL(MAXIND)
-      DIMENSION ISOL(37),WEIGHT(135),INDEX(MAXIND)
+     Parameter (LEVMAX = 51, LAYMAX = 50, MAXWEL= 37, MAXIND= 135)
+     IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+     
+     Real(8), dimension (LEVMAX) :: RAYL,SCAL
+     Real(8), dimension (LEVMAX) :: RAY,SCA
+     Real(8), dimension (LEVMAX) :: TEMP,ALT,ROL,ROH,RO3
+     Real(8), dimension (LAYMAX) :: DZ
+     Real(8), dimension (MAXIND) :: SOL
+     DIMENSION ISOL(37),WEIGHT(135),INDEX(MAXIND)
+     real(8), dimension (LEVMAX) :: PRESS
 
       DATA RAYL /2.1352E+1,2.4178E+1,2.7378E+1,&
      & 3.1117E+1,3.5642E+1,4.0885E+1,4.6968E+1,5.4039E+1,6.2270E+1,&
@@ -428,12 +419,43 @@
 
 ! ....................................................................
 !     *** model atmosphere ***
-      OPEN (UNIT=9,FILE='Srbpres.dat', FORM='FORMATTED',STATUS='OLD')
-
-      READ (9,*) NLEV
-      READ (9,*) (PRESS(I),I=1,NLEV)
-      NLAY = NLEV - 1
-      CLOSE (9)
+     NLEV = 31
+!     PRESS = (/1.01, 1.59, 3.05, 6.0, 12.2, 25.7, 30.0, 35.0, 40.9, 48.0, &
+!				&56.5, 66.6, 78.9, 93.7, 111.0, 132.0, 156.0, 182.0, 213.0, 247.0, &
+!				&286.0, 329.0, 378.0, 432.0, 492.0, 559.0, 633.0, 715.0, 805.0, 904.0, 1025.0/)
+	PRESS(1) = 1.01D0
+	PRESS(2) = 1.59
+	PRESS(3) = 3.05
+	PRESS(4) = 6.0
+	PRESS(5) = 12.2
+	PRESS(6) = 25.7
+	PRESS(7) = 30.0
+	PRESS(8) = 35.0
+	PRESS(9) = 40.9
+	PRESS(10) = 48.0
+	PRESS(11) = 56.5
+	PRESS(12) = 66.6
+	PRESS(13) = 78.9
+	PRESS(14) = 93.7
+	PRESS(15) = 111.0
+	PRESS(16) = 132.0
+	PRESS(17) = 156.0
+	PRESS(18) = 182.0
+	PRESS(19) = 213.0
+	PRESS(20) = 247.0
+	PRESS(21) = 286.0
+	PRESS(22) = 329.0
+	PRESS(23) = 378.0
+	PRESS(24) = 432.0
+    PRESS(25) = 492.0
+    PRESS(26) = 559.0
+    PRESS(27) = 633.0
+    PRESS(28) = 715.0
+    PRESS(29) = 805.0
+    PRESS(30) = 904.0
+    PRESS(31) = 1025.0
+    NLAY = NLEV - 1
+    
 !......................................................................
 ! Subroutine PTZQD - calculation of atmospheric properties for each level
 ! input  - LATMOS,NLEV,PRESS

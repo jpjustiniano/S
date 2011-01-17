@@ -1,10 +1,8 @@
 ! Copyright (C) 2010, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
 ! Programa para el calculo de la radiacion Global, Difusa y Directa.
 
-! gfortran -c -I/usr/include "%f"
-! gfortran -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o transmitancia transmitancia.f90
 ! gfortran -g -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o transmitancia transmitancia.f90 Atmosphe.o Strpsrb.o Astro.o
-
+! gfortran -O3 -fopenmp -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o transmitancia transmitancia.f90 Strpsrb.f90 Astro.f90 ;
 
 ! Revisar:
 !	Revisar que pasa  con pixeles en borde donde no es procesado el pixel lateral
@@ -22,6 +20,7 @@
 
  Program trasmitancia
  use netcdf
+ !$    use OMP_LIb
  implicit none
  
  integer i, j, rec
@@ -58,8 +57,10 @@
  integer :: x_dimid_rad, y_dimid_rad,hora_dimid_rad
  integer :: x_varid_rad, y_varid_rad, xf_varid_rad, yf_varid_rad, hora_varid_rad
  integer :: Global_varid, Difusa_varid, Directa_varid, XKT_varid, XKD_varid
-
  
+ ! Variables OpenMPI
+ integer:: TID
+
  ! Variables Brasil
  Real(8) :: E0,DEC,ET
  Real(8) :: DECR, YLATR, CODEC, COLAT, SIDEC, SILAT
@@ -82,9 +83,14 @@
  print *
 
 !**************************************************** Lectura de archivo de entrada
+ TID = 1
+ !$    TID = omp_get_num_procs();
+ !$    call OMP_SET_NUM_THREADS(TID)
+ 
  call date_and_time(DATE=fecha, VALUES=tiempo)
  open (unit=16, file='log_trans.txt')
-
+ 
+ 
  call get_command_argument(1, argument)
  call check( nf90_open(argument, nf90_nowrite, ncid) )
       
@@ -187,19 +193,19 @@
  call check( nf90_put_att(ncid_rad, Global_varid, "missing_value", -32768) )
  call check( nf90_put_att(ncid_rad, Global_varid, "valid_min", -32768) )
  call check( nf90_put_att(ncid_rad, Global_varid, "valid_max", 32768) )
- call check( nf90_put_att(ncid_rad, Global_varid, "scale_factor", 0.01) )
+ call check( nf90_put_att(ncid_rad, Global_varid, "scale_factor", 0.1) )
  
  call check( nf90_put_att(ncid_rad, Difusa_varid, "units", "W/m2") )
  call check( nf90_put_att(ncid_rad, Difusa_varid, "missing_value", -32768) )
  call check( nf90_put_att(ncid_rad, Difusa_varid, "valid_min", -32768) )
  call check( nf90_put_att(ncid_rad, Difusa_varid, "valid_max", 32768) )
- call check( nf90_put_att(ncid_rad, Difusa_varid, "scale_factor", 0.01) )
+ call check( nf90_put_att(ncid_rad, Difusa_varid, "scale_factor", 0.1) )
  
  call check( nf90_put_att(ncid_rad, Directa_varid, "units", "W/m2") )
  call check( nf90_put_att(ncid_rad, Directa_varid, "missing_value", -32768) )
  call check( nf90_put_att(ncid_rad, Directa_varid, "valid_min", -32768) )
  call check( nf90_put_att(ncid_rad, Directa_varid, "valid_max", 32768) )
- call check( nf90_put_att(ncid_rad, Directa_varid, "scale_factor", 0.01) )
+ call check( nf90_put_att(ncid_rad, Directa_varid, "scale_factor", 0.1) )
  
  ! End define mode.
  call check( nf90_enddef(ncid_rad) )
@@ -223,6 +229,7 @@
  GLINHA = (G - G*G)/(1 - G*G)	! corrected G
  BETA = 0.5 - 3.*GLINHA/8. - 7.*GLINHA**3/128. - 9.*GLINHA**5/128. ! cloud backscatter coefficient
 
+
  do rec = 1, Nhora
 	dia = int(hora(rec)/24)
 	horad = hora(rec)- dia*24
@@ -236,7 +243,9 @@
 	
 	print *,'rec: ',rec
 
-	!$omp parallel
+!$omp parallel private (XIM,vis,Alt,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,COSZEN,Theta,TCLEARn,TDIRn,Dir,TCLOUDn,XXKT,XXKD,Dif,Glob)
+	
+
 	Do j = 1, NYf
 		
 		! subroutine ASTRO - calculation of eccentricity correction, declination an equation of time
@@ -253,10 +262,10 @@
 		! calculate time for sunrise
 		COWSR = -1.0*TAN(DECR)*TAN(YLATR)
 		if (COWSR .LT. -1.0) then
-			write(*,*) ' No sunset, No Sunrise: 24 hr insolation', i, j, xf(i), yf(j), XIM 
+			write(*,*) ' No sunset, No Sunrise: 24 hr insolation', i, j, xf(i), yf(j)
 			TSRA  =  0.0
 		else if (COWSR .GT. 1.0) then
-			write(*,*) ' Dark side of the earth, no insolation', i, j, xf(i), yf(j), XIM 
+			write(*,*) ' Dark side of the earth, no insolation', i, j, xf(i), yf(j)
 		else	
 			WSR   = ACOS(COWSR)/CDR
 			TSRA  = 12.00 - WSR/15.
@@ -269,6 +278,8 @@
 		
 		SC0  = 1367.00
 		XI0   = SC0*E0*COSZEN
+		
+		!$omp do
 		
 		Do i=1, NXf
 			! Lectura de archivo con valores de temperatura, HR, vis., albedo y altura, lat y long.
@@ -357,7 +368,7 @@
 				DTAUW = -1.0
 				Dir=-2000.0
 				Dif=-2000.0
-				print *, 'Error en (i,j):',i,j
+				print *, 'Error en (i,j):',i,j, CH1_max(i,j), CH1_min(i,j)
 			end if
 			
 			
@@ -388,6 +399,7 @@
 			End if  ! Fin de procesamiento de pixel con altura > 0.
 		
 		End do
+		!$omp end do
 		print *,j,'/',NYf, Directa(NXf-100,j), Difusa(NXf-100,j), Global(NXf-100,j)
 	End do
 	!$omp end parallel
