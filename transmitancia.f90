@@ -339,10 +339,10 @@
 			! Subroutine STRPSRB - calculate transmittance for clear sky
 			! input  - LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,ISUB,TAUW,TOP,NCL,INTVAL,WH2O,CLOLWC,CDR
 			! output - TRANS
-			CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,0,IWP,ISUB,&	
+			If(mod(i,10)=0 .and.mod(j,10)=0)  CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,0,IWP,ISUB,&	
 				&     0.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLEARn,TDIRn)
 
-			CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,1,IWP,ISUB,&	
+			If(mod(i,10)=0 .and.mod(j,10)=0) CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,1,IWP,ISUB,&	
 				&    100.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLOUDn,TDIRn2)
 			
 			! Calculo de irradiancia global, difusa y directa a partir de transmitancias calculadas.
