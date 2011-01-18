@@ -365,9 +365,9 @@
 				Dir = DTAUW * TDIRn * XI0
 				Dif = Glob - Dir
 			else
-				DTAUW = -1.0
-				Dir=-2000.0
-				Dif=-2000.0
+				DTAUW = -2.0
+				Dir=-2.0
+				Dif=-2.0
 				print *, 'Error en (i,j):',i,j, CH1_max(i,j), CH1_min(i,j)
 			end if
 			
