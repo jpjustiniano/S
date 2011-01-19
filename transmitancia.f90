@@ -2,7 +2,7 @@
 ! Programa para el calculo de la radiacion Global, Difusa y Directa.
 
 ! gfortran -g -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o transmitancia transmitancia.f90 Atmosphe.o Strpsrb.o Astro.o
-! gfortran -O3 -fopenmp -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o transmitancia transmitancia.f90 Strpsrb.f90 Astro.f90 ;
+! gfortran -O3 -fopenmp -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o transmitanciaOMP transmitancia.f90 Strpsrb.f90 Astro.f90 
 
 ! Revisar:
 !	Revisar que pasa  con pixeles en borde donde no es procesado el pixel lateral
@@ -12,11 +12,11 @@
 !Canal 4: [432, 2255]
 
 !Imagen Media Hora:
-!Canal 1_SI: [1, 3700]
-!Canal 1_ID: [1728, 5800]
+!Canal 1_SI: [1, 4380]
+!Canal 1_ID: [1720, 5477]
  
-!Canal 4_SI: [1, 925]
-!Canal 4_ID: [432, 1450]
+!Canal 4_SI: [1, 1095]
+!Canal 4_ID: [430, 1369]
 
  Program trasmitancia
  use netcdf
@@ -40,21 +40,24 @@
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out   	! Matrices de archivo original
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
  real, dimension(:,:), allocatable :: CH1_max, CH1_min  !  Matrices max min
+ integer, dimension(:,:), allocatable :: Lat_CH1 , Lon_CH1, Lat_CH4 , Lon_CH4
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
  integer :: CH1_varid, Ch4_varid
  integer :: CH1_max_varid, CH1_min_varid, CH4_max_varid, CH4_min_varid
+ integer :: Lat_CH4_varid, Lon_CH4_varid , Lat_CH1_varid, Lon_CH1_varid
+ integer :: Lat_CH4_rad_varid, Lon_CH4_rad_varid , Lat_CH1_rad_varid, Lon_CH1_rad_varid
  
  integer :: start(NDIMS), count(NDIMS), countf(NDIMS)
- integer :: dimids(NDIMS), dimids_fine(NDIMS)
+ integer :: dimids(NDIMS), dimids_fine(NDIMS), dimids2d(NDIMS_IN), dimids2df(NDIMS_IN)
  
  ! Variables NETCDF archivo salida
  character(4)  :: cano
  character(2)  :: cmes
  character(14) :: filename_out
  integer :: ncid_rad
- integer :: x_dimid_rad, y_dimid_rad,hora_dimid_rad
+ integer :: x_dimid_rad, y_dimid_rad,hora_dimid_rad, xf_dimid_rad, yf_dimid_rad
  integer :: x_varid_rad, y_varid_rad, xf_varid_rad, yf_varid_rad, hora_varid_rad
  integer :: Global_varid, Difusa_varid, Directa_varid, XKT_varid, XKD_varid
  
@@ -95,16 +98,20 @@
  call check( nf90_open(argument, nf90_nowrite, ncid) )
       
  ! Get the varids of the latitude and longitude coordinate variables.
- call check( nf90_inq_varid(ncid, "x", x_varid) )
- call check( nf90_inq_varid(ncid, "y", y_varid) )
- call check( nf90_inq_varid(ncid, "xf", xf_varid) )
- call check( nf90_inq_varid(ncid, "yf", yf_varid) )
+ !call check( nf90_inq_varid(ncid, "x", x_varid) )
+ !call check( nf90_inq_varid(ncid, "y", y_varid) )
+ !call check( nf90_inq_varid(ncid, "xf", xf_varid) )
+ !call check( nf90_inq_varid(ncid, "yf", yf_varid) )
  call check( nf90_inq_varid(ncid, "hora", hora_varid) )
 
  call check( nf90_inq_varid(ncid, "CH1", CH1_varid) )
  call check( nf90_inq_varid(ncid, "CH4", CH4_varid) )
  call check( nf90_inq_varid(ncid, "CH1_max", CH1_max_varid) )
  call check( nf90_inq_varid(ncid, "CH1_min", CH1_min_varid) )
+ call check( nf90_inq_varid(ncid, "Lat_CH4", Lat_CH4_varid) )
+ call check( nf90_inq_varid(ncid, "Lon_CH4", Lon_CH4_varid) )
+ call check( nf90_inq_varid(ncid, "Lat_CH1", Lat_CH1_varid) )
+ call check( nf90_inq_varid(ncid, "Lon_CH1", Lon_CH1_varid) )
  
  call check( nf90_inq_dimid(ncid, "x", x_dimid) )
  call check( nf90_inq_dimid(ncid, "y", y_dimid) )
@@ -142,15 +149,25 @@
  allocate(Difusa(NXf,NYf))
  allocate(Directa(NXf,NYf))
  
+ allocate (Lat_CH1 (NXf, NYf) )
+ allocate (Lon_CH1 (NXf, NYf) )
+ allocate (Lat_CH4 (Nx, Ny) )
+ allocate (Lon_CH4 (Nx, Ny) )
+ 
 
- ! Lectura de matrices de maximo y minimo
- call check( nf90_get_var(ncid, x_varid, x) )
- call check( nf90_get_var(ncid, y_varid, y) )
- call check( nf90_get_var(ncid, xf_varid, xf) )
- call check( nf90_get_var(ncid, yf_varid, yf) )
+ ! Lectura de matrices 
+ !call check( nf90_get_var(ncid, x_varid, x) )
+ !call check( nf90_get_var(ncid, y_varid, y) )
+ !call check( nf90_get_var(ncid, xf_varid, xf) )
+ !call check( nf90_get_var(ncid, yf_varid, yf) )
  call check( nf90_get_var(ncid, hora_varid, hora) )
  call check( nf90_get_var(ncid, CH1_max_varid, CH1_max) )
  call check( nf90_get_var(ncid, CH1_min_varid, CH1_min) )
+ call check( nf90_get_var(ncid, Lat_CH4_varid, Lat_CH4) )
+ call check( nf90_get_var(ncid, Lon_CH4_varid, Lon_CH4) )
+ call check( nf90_get_var(ncid, Lat_CH1_varid, Lat_CH1) )
+ call check( nf90_get_var(ncid, Lon_CH1_varid, Lon_CH1) )
+
  
  
  ! Lectura de pixeles de CH1 y CH4
@@ -172,21 +189,31 @@
  
  call check( nf90_create(filename_out,NF90_64BIT_OFFSET, ncid_rad) ) ! ncid, archivo de salida recortado
  ! Dimensiones
- call check( nf90_def_dim(ncid_rad, "x", NXf, x_dimid_rad) )  ! Define the dimensions. 
- call check( nf90_def_dim(ncid_rad, "y", NYf, y_dimid_rad) )
+ call check( nf90_def_dim(ncid_rad, "x", NX, x_dimid_rad) )  ! Define the dimensions. 
+ call check( nf90_def_dim(ncid_rad, "y", NY, y_dimid_rad) )
+ call check( nf90_def_dim(ncid_rad, "xf", NXf, xf_dimid_rad) )  ! Define the dimensions. 
+ call check( nf90_def_dim(ncid_rad, "yf", NYf, yf_dimid_rad) )
  call check( nf90_def_dim(ncid_rad, "hora", Nhora, hora_dimid_rad) )
+ 
  ! Variables
  call check( nf90_def_var(ncid_rad,"x", NF90_FLOAT, x_dimid_rad, x_varid_rad) )	! Define the coordinate variables
  call check( nf90_def_var(ncid_rad,"y", NF90_FLOAT, y_dimid_rad, y_varid_rad) )	! 32 bit
- call check( nf90_def_var(ncid_rad,"hora", NF90_FLOAT, hora_dimid_rad, hora_varid_rad) ) ! 32 bit    
+ call check( nf90_def_var(ncid_rad,"hora", NF90_FLOAT, hora_dimid_rad, hora_varid_rad) ) ! 32 bit
+     
 
- dimids =  (/ x_dimid_rad, y_dimid_rad, hora_dimid_rad /) ! The dimids array is used to pass the IDs of the dimensions
+ dimids =  (/ xf_dimid_rad, yf_dimid_rad, hora_dimid_rad /) ! The dimids array is used to pass the IDs of the dimensions
+ dimids2d =  (/ x_dimid, y_dimid/)
+ dimids2df =  (/ xf_dimid, yf_dimid/)
 
  call check( nf90_def_var(ncid_rad, "Global", NF90_SHORT, dimids, Global_varid) )
  call check( nf90_def_var(ncid_rad, "Difusa", NF90_SHORT, dimids, Difusa_varid) )
  call check( nf90_def_var(ncid_rad, "Directa", NF90_SHORT, dimids, Directa_varid) )
  call check( nf90_def_var(ncid_rad, "XKT", NF90_SHORT, dimids, XKT_varid) )
  call check( nf90_def_var(ncid_rad, "XKD", NF90_SHORT, dimids, XKD_varid) )
+ call check( nf90_def_var(ncid_rad, "Lat_CH4", NF90_SHORT, dimids2d, Lat_CH4_rad_varid) )
+ call check( nf90_def_var(ncid_rad, "Lon_CH4", NF90_SHORT, dimids2d, Lon_CH4_rad_varid) )
+ call check( nf90_def_var(ncid_rad, "Lat_CH1", NF90_SHORT, dimids2df, Lat_CH1_rad_varid) )
+ call check( nf90_def_var(ncid_rad, "Lon_CH1", NF90_SHORT, dimids2df, Lon_CH1_rad_varid) )
  
  ! Atributos variables
  call check( nf90_put_att(ncid_rad, Global_varid, "units", "W/m2") )
@@ -206,13 +233,42 @@
  call check( nf90_put_att(ncid_rad, Directa_varid, "valid_min", -32768) )
  call check( nf90_put_att(ncid_rad, Directa_varid, "valid_max", 32768) )
  call check( nf90_put_att(ncid_rad, Directa_varid, "scale_factor", 0.1) )
+
+ ! Atributos de Geolocalizacion
+call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "units", "degrees_north"))
+call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "missing_value", -32768) )
+call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "valid_min", -32768) )
+call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "valid_max", 32768) )
+call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "scale_factor", 0.01) )
+
+call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "units", "degrees_east") )
+call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "missing_value", -32768) )
+call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "valid_min", -32768) )
+call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "valid_max", 32768) )
+call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "scale_factor", 0.01) )
+
+call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "units", "degrees_north"))
+call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "missing_value", -32768) )
+call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "valid_min", -32768) )
+call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "valid_max", 32768) )
+call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "scale_factor", 0.01) )
+
+call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "units", "degrees_east") )
+call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "missing_value", -32768) )
+call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "valid_min", -32768) )
+call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "valid_max", 32768) )
+call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "scale_factor", 0.01) )
  
  ! End define mode.
  call check( nf90_enddef(ncid_rad) )
  !**************************************************** Procesamiento de las imagenes Sat.
  
- call check( nf90_put_var(ncid_rad, x_varid_rad, xf) )
- call check( nf90_put_var(ncid_rad, y_varid_rad, yf) )	
+ !call check( nf90_put_var(ncid_rad, x_varid_rad, xf) )
+ !call check( nf90_put_var(ncid_rad, y_varid_rad, yf) )	
+ call check( nf90_put_var(ncid_rad, Lat_CH4_rad_varid, Lat_CH4) )
+ call check( nf90_put_var(ncid_rad, Lon_CH4_rad_varid, Lon_CH4) )
+ call check( nf90_put_var(ncid_rad, Lat_CH1_rad_varid, Lat_CH1) )
+ call check( nf90_put_var(ncid_rad, Lon_CH1_rad_varid, Lon_CH1) )
  call check( nf90_put_var(ncid_rad, hora_varid_rad, hora) )
 
  ! Fixed input parameters for subroutine strpsrb
@@ -244,7 +300,6 @@
 	print *,'rec: ',rec
 
 !$omp parallel private (XIM,vis,Alt,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,COSZEN,Theta,TCLEARn,TDIRn,Dir,TCLOUDn,XXKT,XXKD,Dif,Glob)
-	
 
 	Do j = 1, NYf
 		
@@ -280,7 +335,6 @@
 		XI0   = SC0*E0*COSZEN
 		
 		!$omp do
-		
 		Do i=1, NXf
 			! Lectura de archivo con valores de temperatura, HR, vis., albedo y altura, lat y long.
 			! En funcion del archivo de altura se procesa o no el pixel.
@@ -298,7 +352,7 @@
 		  IF ( Alt > 0. ) THEN 
 			! Calculo de Cobertura de nubes.
 			XIM =  (CH1_in(i,j)-CH1_max(i,j))/(CH1_min(i,j)-CH1_max(i,j) ) 
-			
+			XIM = 1.0 - XIM			! cloud cover coefficient from satellite data
 			! calculation of the visibility at the station as function of visibility and altitude
 			 vis   = vis * EXP( (LOG(100.0/vis)/1000.0)*Alt )
 			! test for visibility between 2 and 150 km
@@ -339,10 +393,12 @@
 			! Subroutine STRPSRB - calculate transmittance for clear sky
 			! input  - LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,ISUB,TAUW,TOP,NCL,INTVAL,WH2O,CLOLWC,CDR
 			! output - TRANS
-			If(mod(i,10)=0 .and.mod(j,10)=0)  CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,0,IWP,ISUB,&	
+			!If(mod(i,10)==0 .and. mod(j,10)==0)  
+			CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,0,IWP,ISUB,&	
 				&     0.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLEARn,TDIRn)
 
-			If(mod(i,10)=0 .and.mod(j,10)=0) CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,1,IWP,ISUB,&	
+			!If(mod(i,10)==0 .and. mod(j,10)==0) 
+			CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,1,IWP,ISUB,&	
 				&    100.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLOUDn,TDIRn2)
 			
 			! Calculo de irradiancia global, difusa y directa a partir de transmitancias calculadas.
@@ -351,8 +407,7 @@
 			Glob  = XI0 *((1.0 - XIM) * (TCLEARn - TCLOUDn) + TCLOUDn)
 			if (Glob < 0.0)  Glob = 0.
 			XXKT=Glob/XI0
-			
-			XIM = 1.0 - XIM			! cloud cover coefficient from satellite data
+			XIM = 1.0 - XIM		!!
 			
 			If ((XIM >= 0.95).AND.(XIM < 1.01)) then
 				TAUW = 1.0
@@ -400,9 +455,11 @@
 		
 		End do
 		!$omp end do
-		print *,j,'/',NYf, Directa(NXf-100,j), Difusa(NXf-100,j), Global(NXf-100,j)
 	End do
-	!$omp end parallel
+!$omp end parallel		
+print *, Directa(NXf-100,500), Difusa(NXf-100,500), Global(NXf-100,500)
+		
+
 
 	call check( nf90_put_var(ncid_rad, Global_varid, Global, start=start,count = countf))
 	call check( nf90_put_var(ncid_rad, Difusa_varid, Difusa, start=start,count = countf))

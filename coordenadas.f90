@@ -79,7 +79,14 @@ Do i =1, (r4f- r4i)*4+1
 		End do		
 	End do
 End do
-
+ 
+ open (unit=12, file='latitude.CH1.txt')
+ write (12,*) Lat_CH1
+ Close (12)
+ open (unit=12, file='longitude.CH1.txt')
+ write (12,*) Lon_CH1
+ Close (12)
+ 
   print *
   print *, 'CH4',Lat_CH4 (1,1) , Lat_CH4 (2,1), Lat_CH4 (Nx-1,1), Lat_CH4 (Nx,1)
  print *, Lat_CH1 (1,1) , Lat_CH1 (2,1) ,  Lat_CH1 ((Nx-1)*4+1-1,1) , Lat_CH1 ((Nx-1)*4+1,1) 
