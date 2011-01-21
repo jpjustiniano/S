@@ -20,17 +20,18 @@
 
  Program trasmitancia
  use netcdf
- !$    use OMP_LIb
+ !$ use OMP_LIb
  implicit none
  
- integer i, j, rec
+ integer :: i, j, rec
  real ano, mes, diaj, dia 
  Real(8) :: Alt, HR, Albedo, temp, vis
  Real horad
  character (30) :: argument  ! Nombre de archivo 
  character(8)  :: fecha
- integer,dimension(8) :: tiempo, tiempof
+ integer,dimension(8) :: tiempo, tiempof, tiempoa
  real(8), parameter :: pi= acos(-1.0), cdr= pi/180.0
+ Logical :: Flag1 = .true.
  
  ! Variables NETCDF archivo entrada
  integer :: ncid, ncid_in, status
@@ -60,6 +61,7 @@
  integer :: x_dimid_rad, y_dimid_rad,hora_dimid_rad, xf_dimid_rad, yf_dimid_rad
  integer :: x_varid_rad, y_varid_rad, xf_varid_rad, yf_varid_rad, hora_varid_rad
  integer :: Global_varid, Difusa_varid, Directa_varid, XKT_varid, XKD_varid
+ integer(2) :: valid_max = 15000, valid_min=-3
  
  ! Variables OpenMPI
  integer:: TID
@@ -73,7 +75,7 @@
  real(8) :: TDIRn, TCLOUDn, TCLEARn, TDIRn2
  integer :: LATMOS, IWP, ISUB, NCL, INTVAL
  real(8) :: COWSR, TSRA, WSR, TSSA, TSRS, TSSS
- real(8) :: SC0, XI0, XIM, XXKT, XXKD, RSFCN, G, GLINHA, BETA, TAUW, DTAUW, DELTAW
+ real(8) :: XI0, XIM, XXKT, XXKD, RSFCN, G, GLINHA, BETA, TAUW, DTAUW, DELTAW
  Integer, dimension(:,:), allocatable :: Global, Difusa, Directa, XKT, XKD
  real(8) :: Glob, Dif, Dir
  
@@ -93,6 +95,7 @@
  call date_and_time(DATE=fecha, VALUES=tiempo)
  open (unit=16, file='log_trans.txt')
  
+ tiempoa = tiempo
  
  call get_command_argument(1, argument)
  call check( nf90_open(argument, nf90_nowrite, ncid) )
@@ -196,8 +199,8 @@
  call check( nf90_def_dim(ncid_rad, "hora", Nhora, hora_dimid_rad) )
  
  ! Variables
- call check( nf90_def_var(ncid_rad,"x", NF90_FLOAT, x_dimid_rad, x_varid_rad) )	! Define the coordinate variables
- call check( nf90_def_var(ncid_rad,"y", NF90_FLOAT, y_dimid_rad, y_varid_rad) )	! 32 bit
+ !call check( nf90_def_var(ncid_rad,"x", NF90_FLOAT, x_dimid_rad, x_varid_rad) )	! Define the coordinate variables
+ !call check( nf90_def_var(ncid_rad,"y", NF90_FLOAT, y_dimid_rad, y_varid_rad) )	! 32 bit
  call check( nf90_def_var(ncid_rad,"hora", NF90_FLOAT, hora_dimid_rad, hora_varid_rad) ) ! 32 bit
      
 
@@ -215,49 +218,68 @@
  call check( nf90_def_var(ncid_rad, "Lat_CH1", NF90_SHORT, dimids2df, Lat_CH1_rad_varid) )
  call check( nf90_def_var(ncid_rad, "Lon_CH1", NF90_SHORT, dimids2df, Lon_CH1_rad_varid) )
  
+ ! Atributos globales    
+ call check( nf90_put_att(ncid_rad, NF90_GLOBAL, "imagenes", "media_hora") )
+ call check( nf90_put_att(ncid_rad, NF90_GLOBAL, "Procesadox", "JPJ") )
+ call check( nf90_put_att(ncid_rad, NF90_GLOBAL, "date", fecha) )
+ 
  ! Atributos variables
  call check( nf90_put_att(ncid_rad, Global_varid, "units", "W/m2") )
- call check( nf90_put_att(ncid_rad, Global_varid, "missing_value", -32768) )
- call check( nf90_put_att(ncid_rad, Global_varid, "valid_min", -32768) )
- call check( nf90_put_att(ncid_rad, Global_varid, "valid_max", 32768) )
+ call check( nf90_put_att(ncid_rad, Global_varid, "missing_value", valid_min) )
+ call check( nf90_put_att(ncid_rad, Global_varid, "valid_min", valid_min) )
+ call check( nf90_put_att(ncid_rad, Global_varid, "valid_max", valid_max) )
  call check( nf90_put_att(ncid_rad, Global_varid, "scale_factor", 0.1) )
  
  call check( nf90_put_att(ncid_rad, Difusa_varid, "units", "W/m2") )
- call check( nf90_put_att(ncid_rad, Difusa_varid, "missing_value", -32768) )
- call check( nf90_put_att(ncid_rad, Difusa_varid, "valid_min", -32768) )
- call check( nf90_put_att(ncid_rad, Difusa_varid, "valid_max", 32768) )
+ call check( nf90_put_att(ncid_rad, Difusa_varid, "missing_value", valid_min) )
+ call check( nf90_put_att(ncid_rad, Difusa_varid, "valid_min", valid_min) )
+ call check( nf90_put_att(ncid_rad, Difusa_varid, "valid_max", valid_max) )
  call check( nf90_put_att(ncid_rad, Difusa_varid, "scale_factor", 0.1) )
  
  call check( nf90_put_att(ncid_rad, Directa_varid, "units", "W/m2") )
- call check( nf90_put_att(ncid_rad, Directa_varid, "missing_value", -32768) )
- call check( nf90_put_att(ncid_rad, Directa_varid, "valid_min", -32768) )
- call check( nf90_put_att(ncid_rad, Directa_varid, "valid_max", 32768) )
+ call check( nf90_put_att(ncid_rad, Directa_varid, "missing_value", valid_min) )
+ call check( nf90_put_att(ncid_rad, Directa_varid, "valid_min", valid_min) )
+ call check( nf90_put_att(ncid_rad, Directa_varid, "valid_max", valid_max) )
  call check( nf90_put_att(ncid_rad, Directa_varid, "scale_factor", 0.1) )
+ 
+ call check( nf90_put_att(ncid_rad, XKT_varid, "units", "-") )
+ call check( nf90_put_att(ncid_rad, XKT_varid, "missing_value", valid_min) )
+ call check( nf90_put_att(ncid_rad, XKT_varid, "valid_min", valid_min) )
+ call check( nf90_put_att(ncid_rad, XKT_varid, "valid_max", 150) )
+ call check( nf90_put_att(ncid_rad, XKT_varid, "scale_factor", 0.01) )
+ 
+ call check( nf90_put_att(ncid_rad, XKD_varid, "units", "-") )
+ call check( nf90_put_att(ncid_rad, XKD_varid, "missing_value", valid_min) )
+ call check( nf90_put_att(ncid_rad, XKD_varid, "valid_min", valid_min) )
+ call check( nf90_put_att(ncid_rad, XKD_varid, "valid_max", 150) )
+ call check( nf90_put_att(ncid_rad, XKD_varid, "scale_factor", 0.01) )
 
  ! Atributos de Geolocalizacion
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "units", "degrees_north"))
-call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "missing_value", -32768) )
-call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "valid_min", -32768) )
+call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "missing_value", -32767) )
+call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "valid_min", -32767) )
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "valid_max", 32768) )
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "scale_factor", 0.01) )
 
 call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "units", "degrees_east") )
-call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "missing_value", -32768) )
+!call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "missing_value", -32768) )
 call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "valid_min", -32768) )
 call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "valid_max", 32768) )
 call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "scale_factor", 0.01) )
 
 call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "units", "degrees_north"))
-call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "missing_value", -32768) )
+!call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "missing_value", -32768) )
 call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "valid_min", -32768) )
 call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "valid_max", 32768) )
 call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "scale_factor", 0.01) )
 
 call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "units", "degrees_east") )
-call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "missing_value", -32768) )
+!call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "missing_value", -32768) )
 call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "valid_min", -32768) )
 call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "valid_max", 32768) )
 call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "scale_factor", 0.01) )
+
+
  
  ! End define mode.
  call check( nf90_enddef(ncid_rad) )
@@ -287,6 +309,10 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "scale_factor", 0.01) )
 
 
  do rec = 1, Nhora
+	Directa = -1
+	Difusa = -1
+	Global = -1
+	
 	dia = int(hora(rec)/24)
 	horad = hora(rec)- dia*24
 	call diajuliano (dia, mes, ano, diaj) 
@@ -298,8 +324,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "scale_factor", 0.01) )
 	call check( nf90_get_var(ncid, CH4_varid, CH4_in, start, count) )
 	
 	print *,'rec: ',rec
-
-!$omp parallel private (XIM,vis,Alt,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,COSZEN,Theta,TCLEARn,TDIRn,Dir,TCLOUDn,XXKT,XXKD,Dif,Glob)
+	
 
 	Do j = 1, NYf
 		
@@ -308,19 +333,22 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "scale_factor", 0.01) )
 		CALL ASTRO(diaj,E0,DEC,ET) 
 		
 		DECR = DEC*cdr
-		YLATR= yf(j)*cdr
+		YLATR= Lat_CH1(NXf/2,j)/100.*cdr
 		CODEC = cos(DECR)
 		COLAT = cos(YLATR)
 		SIDEC = sin(DECR)
 		SILAT = sin(YLATR)
-		
+       
+                   
+! / No se esta usando 
+
 		! calculate time for sunrise
 		COWSR = -1.0*TAN(DECR)*TAN(YLATR)
 		if (COWSR .LT. -1.0) then
-			write(*,*) ' No sunset, No Sunrise: 24 hr insolation', i, j, xf(i), yf(j)
+			write(*,*) ' No sunset, No Sunrise: 24 hr insolation', i, j, Lon_CH1(NXf/2,j), Lat_CH1(NXf/2,j)
 			TSRA  =  0.0
 		else if (COWSR .GT. 1.0) then
-			write(*,*) ' Dark side of the earth, no insolation', i, j, xf(i), yf(j)
+			write(*,*) ' Dark side of the earth, no insolation', i, j, Lon_CH1(NXf/2,j), Lat_CH1(NXf/2,j)
 		else	
 			WSR   = ACOS(COWSR)/CDR
 			TSRA  = 12.00 - WSR/15.
@@ -330,16 +358,27 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "scale_factor", 0.01) )
 		TSSA  = 24.0-TSRA
 		TSRS  = TSRA - TIMCOR
 		TSSS  = TSSA - TIMCOR
+! /		
+		!calculate time correction
+		ZN = 0.0
+		TIMCOR = (4.0*(15.0*ZN+Lon_CH1(i,j)/100.)+ET)/60.0
+		TSOLAR = horad+TIMCOR    !para entrada com horario em UTC
 		
-		SC0  = 1367.00
-		XI0   = SC0*E0*COSZEN
+		! Characteristic hour angle WI corresponding to the W1-W2 interval
+		WSOLAR    = (12.00 - TSOLAR)*15.
+		COWI  = COS(WSOLAR*CDR)		
+		! Characteristic solar zenith angle THETA (o)
+		COSZEN = SIDEC*SILAT + CODEC*COLAT*COWI
+		THETA  = ACOS(COSZEN)/CDR
+		XI0   = 1367.00*E0*COSZEN
 		
-		!$omp do
+!$omp parallel private(XIM,vis,Alt,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,Dir,XXKT,XXKD,Dif,Glob,TCLEARn,TDIRn,TCLOUDn)
+!$omp do
 		Do i=1, NXf
 			! Lectura de archivo con valores de temperatura, HR, vis., albedo y altura, lat y long.
 			! En funcion del archivo de altura se procesa o no el pixel.
 			 
-		  Temp = 300. ! (K)
+		  Temp = 293. ! (K)
 		  Alt = 500. 	! (m)
 		  HR = .4 	! (0-1. )
 		  albedo = .20! (0-1.)
@@ -376,30 +415,21 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "scale_factor", 0.01) )
 				LATMOS = 1
 				TS     = Temp - T1SFC
 			end if
-			 
-			!calculate time correction
-			ZN = 0.0
-			TIMCOR = (4.0*(15.0*ZN+x(i))+ET)/60.0
-			TSOLAR = horad+TIMCOR    !para entrada com horario em UTC
-			
-			! Characteristic hour angle WI corresponding to the W1-W2 interval
-			WSOLAR    = (12.00 - TSOLAR)*15.
-			COWI  = COS(WSOLAR*CDR)
-			
-			! Characteristic solar zenith angle THETA (o)
-			COSZEN = SIDEC*SILAT + CODEC*COLAT*COWI
-			THETA  = ACOS(COSZEN)/CDR
+		
 			
 			! Subroutine STRPSRB - calculate transmittance for clear sky
 			! input  - LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,ISUB,TAUW,TOP,NCL,INTVAL,WH2O,CLOLWC,CDR
 			! output - TRANS
-			!If(mod(i,10)==0 .and. mod(j,10)==0)  
-			CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,0,IWP,ISUB,&	
+			
+			If((mod(i,5)==0) .or. flag1) then 
+				CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,0,IWP,ISUB,&	
 				&     0.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLEARn,TDIRn)
 
-			!If(mod(i,10)==0 .and. mod(j,10)==0) 
-			CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,1,IWP,ISUB,&	
+				CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,1,IWP,ISUB,&	
 				&    100.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLOUDn,TDIRn2)
+				
+				flag1= .false.
+			end if 
 			
 			! Calculo de irradiancia global, difusa y directa a partir de transmitancias calculadas.
 			
@@ -407,6 +437,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "scale_factor", 0.01) )
 			Glob  = XI0 *((1.0 - XIM) * (TCLEARn - TCLOUDn) + TCLOUDn)
 			if (Glob < 0.0)  Glob = 0.
 			XXKT=Glob/XI0
+			
 			XIM = 1.0 - XIM		!!
 			
 			If ((XIM >= 0.95).AND.(XIM < 1.01)) then
@@ -428,6 +459,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "scale_factor", 0.01) )
 			
 			
 			IF(Dir < 0.0) Dir = 0.0
+			IF(Dif < 0.0) Dif = -1.
 			
 			if(XXKT < 0.0) then
 				XXKD=XXKT
@@ -445,21 +477,29 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "scale_factor", 0.01) )
 			XKD(i,j)  = NInt(XXKD*100)
 			
 			Else  ! Si esta fuera de territorio Chileno.
-				Directa(i,j) = -1.0
-				Difusa (i,j) = -1.0
-				Global(i,j)  = -1.0
-				XKT(i,j)  = -1.0
-				XKD(i,j)  = -1.0 
+				!Directa(i,j) = -1.0
+				!Difusa (i,j) = -1.0
+				!Global(i,j)  = -1.0
+				!XKT(i,j)  = -1.0
+				!XKD(i,j)  = -1.0 
 		  
 			End if  ! Fin de procesamiento de pixel con altura > 0.
 		
 		End do
-		!$omp end do
-	End do
-!$omp end parallel		
-print *, Directa(NXf-100,500), Difusa(NXf-100,500), Global(NXf-100,500)
+		!$omp end do NOWAIT
+!$omp end parallel
+		If (mod(j,5)==0) Flag1 = .true.
 		
 
+	End do
+
+
+	call date_and_time(DATE=fecha, VALUES=tiempof)
+	print *, Global(NXf-100,j-500), Difusa(NXf-100,j-500), Directa(NXf-100,j-500)  
+	print *,'   Tiempo procesamiento: ', tiempof (5) - tiempoa (5) ,"horas", tiempof (6) - tiempoa (6),"min.", &
+					& tiempof (7) - tiempoa (7), "sec."
+	tiempoa = tiempof
+	
 
 	call check( nf90_put_var(ncid_rad, Global_varid, Global, start=start,count = countf))
 	call check( nf90_put_var(ncid_rad, Difusa_varid, Difusa, start=start,count = countf))

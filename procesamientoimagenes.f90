@@ -3,7 +3,7 @@
 ! Funciona con horas en UTC.
 
 ! gfortran -c -I/usr/include "%f"
-! gfortran -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o "%e" "%f"
+! gfortran -O3 -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o "%e" "%f"
 ! gfortran -o "%e" "%f" -L/usr/lib  -lnetcdf   ?? de manual...
 
 ! Variable coordinada de lat y long real.
@@ -235,7 +235,7 @@ End do
  call sunae(iano,diaj,ihora, latit, longit,az,el,ha,dec,soldst)  ! Comp.
 
  if (el < 7.0) then
-    write (*,*) '   ',cdia,'  ', hora,':', minu, " eliminada, nocturna. "
+    write (*,*) '   ',cdia,'  ', hora,':', minu, " eliminada, nocturna. ", el
     write (16,*) '                                   ', trim(filename),"   Eliminada, nocturna. "
     noct = noct +1
     goto 100
@@ -388,7 +388,7 @@ End do
  start = (/ 1, 1, 1 /)
  start(3) = rec
  
- ihorat = (ihora + idia*24)  ! Hora (hr_mes*100)
+ ihorat = (ihora + (idia-1)*24)  ! Hora (hr_mes*100)
  call check( nf90_put_var(ncid, hora_varid, ihorat, start_hora)  )  ! Graba hora
  call check( nf90_open(trim(filename), nf90_nowrite, ncid_in) )  ! Abre archivo de lectura, ncid_in
  
