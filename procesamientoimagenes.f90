@@ -298,24 +298,30 @@ End do
     call check( nf90_put_att(ncid, Lat_CH4_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, Lat_CH4_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, Lat_CH4_varid, "scale_factor", 0.01) )
+    call check( nf90_put_att(ncid, Lat_CH4_varid, "_CoordinateAxisType", "Lat_CH4") )
+    call check( nf90_put_att(ncid, Lat_CH4_varid, "standard_name", "Latitud_CH4") )
     
     call check( nf90_put_att(ncid, Lon_CH4_varid, "units", "degrees_east") )
     call check( nf90_put_att(ncid, Lon_CH4_varid, "missing_value", -32768) )
     call check( nf90_put_att(ncid, Lon_CH4_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, Lon_CH4_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, Lon_CH4_varid, "scale_factor", 0.01) )
-    
+    call check( nf90_put_att(ncid, Lon_CH4_varid, "_CoordinateAxisType", "Lon_CH4") )
+    call check( nf90_put_att(ncid, Lon_CH4_varid, "standard_name", "Longitud_CH4") )
+        
     call check( nf90_put_att(ncid, Lat_CH1_varid, "units", "degrees_north"))
     call check( nf90_put_att(ncid, Lat_CH1_varid, "missing_value", -32768) )
     call check( nf90_put_att(ncid, Lat_CH1_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, Lat_CH1_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, Lat_CH1_varid, "scale_factor", 0.01) )
+    call check( nf90_put_att(ncid, Lat_CH1_varid, "_CoordinateAxisType", "Lat_CH1") )
     
     call check( nf90_put_att(ncid, Lon_CH1_varid, "units", "degrees_east") )
     call check( nf90_put_att(ncid, Lon_CH1_varid, "missing_value", -32768) )
     call check( nf90_put_att(ncid, Lon_CH1_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, Lon_CH1_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, Lon_CH1_varid, "scale_factor", 0.01) )
+    call check( nf90_put_att(ncid, Lon_CH1_varid, "_CoordinateAxisType", "Lon_CH1") )
      
     ! Atributos variables
     call check( nf90_put_att(ncid, CH1_varid, "units", "Albedo*100%") )
@@ -323,14 +329,19 @@ End do
     call check( nf90_put_att(ncid, CH1_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, CH1_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, CH1_varid, "scale_factor", 0.01) )
+    call check( nf90_put_att(ncid, CH1_varid, "_CoordinateAxes", "time Lat_CH1 Lon_CH1") )
+    call check( nf90_put_att(ncid, CH1_varid, "standard_name", "Canal Visible") )
 
     call check( nf90_put_att(ncid, CH4_varid, "units", "temp_deg_C") )
     call check( nf90_put_att(ncid, CH4_varid, "missing_value", -32768) )
     call check( nf90_put_att(ncid, CH4_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, CH4_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, CH4_varid, "scale_factor", 0.01) )
+    call check( nf90_put_att(ncid, CH4_varid, "_CoordinateAxes", "time Lat_CH4 Lon_CH4") )
+    call check( nf90_put_att(ncid, CH4_varid, "standard_name", "Canal Infrarojo") )
     
-    call check( nf90_put_att(ncid, hora_varid, "units", "hours_from_day1"))
+    call check( nf90_put_att(ncid, hora_varid, "units", "UTC_hours_from_day1"))
+    call check( nf90_put_att(ncid, hora_varid, "_CoordinateAxisType", "time"))
 
     ! Atributos globales    
     call check( nf90_put_att(ncid, NF90_GLOBAL, "imagenes", "media_hora") )

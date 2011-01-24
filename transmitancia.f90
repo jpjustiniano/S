@@ -56,7 +56,7 @@
  ! Variables NETCDF archivo salida
  character(4)  :: cano
  character(2)  :: cmes
- character(14) :: filename_out
+ character(25) :: filename_out
  integer :: ncid_rad
  integer :: x_dimid_rad, y_dimid_rad,hora_dimid_rad, xf_dimid_rad, yf_dimid_rad
  integer :: x_varid_rad, y_varid_rad, xf_varid_rad, yf_varid_rad, hora_varid_rad
@@ -184,10 +184,10 @@
  write (cano,'(I4)') NInt(ano)
  If (mes < 10 ) then
 	write(cmes,'(I1)') NInt(mes)
-	filename_out = cano//'0'//cmes//'_rad.nc'
+	filename_out = cano//'0'//cmes//'.media_hora.rad.nc'
  Else
 	write(cmes,'(I2)') NInt(mes)
-	filename_out = cano//cmes//'_rad.nc'
+	filename_out = cano//cmes//'.media_hora.rad.nc'
  End if
  
  call check( nf90_create(filename_out,NF90_64BIT_OFFSET, ncid_rad) ) ! ncid, archivo de salida recortado
@@ -229,18 +229,24 @@
  call check( nf90_put_att(ncid_rad, Global_varid, "valid_min", valid_min) )
  call check( nf90_put_att(ncid_rad, Global_varid, "valid_max", valid_max) )
  call check( nf90_put_att(ncid_rad, Global_varid, "scale_factor", 0.1) )
+ call check( nf90_put_att(ncid_rad, Global_varid, "_CoordinateAxes", "time Lat_CH1 Lon_CH1") )
+ call check( nf90_put_att(ncid_rad, Global_varid, "standard_name", "Radiación Global") )
  
  call check( nf90_put_att(ncid_rad, Difusa_varid, "units", "W/m2") )
  call check( nf90_put_att(ncid_rad, Difusa_varid, "missing_value", valid_min) )
  call check( nf90_put_att(ncid_rad, Difusa_varid, "valid_min", valid_min) )
  call check( nf90_put_att(ncid_rad, Difusa_varid, "valid_max", valid_max) )
  call check( nf90_put_att(ncid_rad, Difusa_varid, "scale_factor", 0.1) )
+ call check( nf90_put_att(ncid_rad, Difusa_varid, "_CoordinateAxes", "time Lat_CH1 Lon_CH1") )
+ call check( nf90_put_att(ncid_rad, Difusa_varid, "standard_name", "Radiación Difusa") )
  
  call check( nf90_put_att(ncid_rad, Directa_varid, "units", "W/m2") )
  call check( nf90_put_att(ncid_rad, Directa_varid, "missing_value", valid_min) )
  call check( nf90_put_att(ncid_rad, Directa_varid, "valid_min", valid_min) )
  call check( nf90_put_att(ncid_rad, Directa_varid, "valid_max", valid_max) )
  call check( nf90_put_att(ncid_rad, Directa_varid, "scale_factor", 0.1) )
+ call check( nf90_put_att(ncid_rad, Directa_varid, "_CoordinateAxes", "time Lat_CH1 Lon_CH1") )
+ call check( nf90_put_att(ncid_rad, Directa_varid, "standard_name", "Radiación Global") )
  
  call check( nf90_put_att(ncid_rad, XKT_varid, "units", "-") )
  call check( nf90_put_att(ncid_rad, XKT_varid, "missing_value", valid_min) )
@@ -260,24 +266,28 @@ call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "missing_value", -32767) )
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "valid_min", -32767) )
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "valid_max", 32768) )
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "scale_factor", 0.01) )
+call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "_CoordinateAxisType", "Lat_CH4") )
 
 call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "units", "degrees_east") )
 !call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "missing_value", -32768) )
 call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "valid_min", -32768) )
 call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "valid_max", 32768) )
 call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "scale_factor", 0.01) )
+call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "_CoordinateAxisType", "Lon_CH4") )
 
 call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "units", "degrees_north"))
 !call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "missing_value", -32768) )
 call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "valid_min", -32768) )
 call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "valid_max", 32768) )
 call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "scale_factor", 0.01) )
+call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "_CoordinateAxisType", "Lat_CH1") )
 
 call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "units", "degrees_east") )
 !call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "missing_value", -32768) )
 call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "valid_min", -32768) )
 call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "valid_max", 32768) )
 call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "scale_factor", 0.01) )
+call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lon_CH1") )
 
 
  
