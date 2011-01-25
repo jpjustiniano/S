@@ -15,32 +15,29 @@
        integer :: ncid
        
        integer, parameter :: NDIMS = 2	      ! We are writing 2D data.
-       integer, parameter :: NX = 10, NY = 15
-       real :: x(NX), y(NY)
-       real :: Start_Lat= -17.5,  Start_Lon= -74., Dlat =-0.0400, Dlon=0.0300
+       integer, parameter :: NX = 1093, NY = 1717
+      
        integer :: x_dimid, y_dimid
        integer :: x_varid, y_varid
        
        integer, dimension(:,:), allocatable :: Alt, Temp, HR, Vis
        integer :: Alt_varid, Temp_varid, HR_varid, Vis_varid
        integer :: dimids(NDIMS)
-       
+       integer, dimension (Nx,Ny) :: Latitud , Longitud
        integer :: i=1,j=1, lat, lon
            
-       allocate(Alt (NY, NX)) ! Allocate memory for data.
-       allocate(Temp (NY, NX))
-       allocate(HR (NY, NX))
-       allocate(Vis (NY, NX))
+       allocate(Alt (Nx, Ny)) ! Allocate memory for data.
+       allocate(Temp (Nx, Ny))
+       allocate(HR (Nx, Ny))
+       allocate(Vis (Nx, Ny))
        !*********************************************************************** Fin declaracion Variables
        call check( nf90_create(FILE_NAME, NF90_CLOBBER, ncid) ) ! f90_clobber overwrite this file if it already exists.
      
        call check( nf90_def_dim(ncid, "x", NX, x_dimid) )  ! Define the dimensions. 
        call check( nf90_def_dim(ncid, "y", NY, y_dimid) )
-     
-       call check( nf90_def_var(ncid,"x", NF90_REAL, x_dimid, x_varid) )	! Define the coordinate variables
-       call check( nf90_def_var(ncid, "y", NF90_REAL, y_dimid, y_varid) )
        
-       dimids =  (/ y_dimid, x_dimid/) ! The dimids array is used to pass the IDs of the dimensions
+       dimids =  (/ x_dimid, y_dimid/) ! The dimids array is used to pass the IDs of the dimensions
+       
        call check( nf90_def_var(ncid, "Alt", NF90_INT, dimids, Alt_varid) )  ! Define the variable and type. NF90_INT (4-byte integer)
        call check( nf90_def_var(ncid, "Temp", NF90_INT, dimids, Temp_varid) )
        call check( nf90_def_var(ncid, "HR", NF90_INT, dimids, HR_varid) )
@@ -62,24 +59,92 @@
        call check( nf90_enddef(ncid) )  ! End define metadata mode. 
        !*********************************************************************** Fin Definiciones
        !************* Latitud y longitud
-       print *, "1"
-       do lat = 1, NY
-          Y(lat) = START_LAT + (lat - 1) * (Dlat)
-       end do
-       do lon = 1, NX
-          X(lon) = START_LON + (lon - 1) * (Dlon)
-       end do
-       call check( nf90_put_var(ncid, x_varid, x) )
-       call check( nf90_put_var(ncid, y_varid, y) )
+       
+! Matrices de Geolocalizacion 
+ open (unit=12, file='latitude.CH4.media_hora.txt', status= 'old', Action='read' )
+ read (12,*) Latitud
+ Close (12)
+ open (unit=12, file='longitude.CH4.media_hora.txt', status= 'old', Action='read' )
+ read (12,*) Longitud
+ Close (12)
+ 
+ Lat_CH4 = Latitud(r4i:r4f,:430)
+ Lon_CH4 = Longitud(r4i:r4f,:430)
+ 
+Do i = 1, Nx
+	Do j =1, Ny
+		Lat_CH1((i-1)*4+1, (j-1)*4+1) =  Lat_CH4(i,j)
+		Lon_CH1((i-1)*4+1, (j-1)*4+1) =  Lon_CH4(i,j)
+	End do
+End do
+
+Do j =1, Ny
+	Do i = 1, Nx-1
+		L1 =  Lat_CH4(i,j)
+		L2 =  Lat_CH4(i+1,j)
+		mm = (L2-L1)/4.	
+		If ( abs(L1)<10 .or. abs(L2)<10 ) then 
+			print *, i,j
+		End if	
+		Do k = 1, 3
+			Lat_CH1((i-1)*4+1+k, (j-1)*4+1) = Nint(L1 + k*mm)
+		End do	
+			
+		L1 =  Lon_CH4(i,j)
+		L2 =  Lon_CH4(i+1,j)
+		mm = (L2-L1)/4.	
+		If ( abs(L1)<10 .or. abs(L2)<10 ) then
+			print *, i,j
+		End if
+		Do k = 1, 3
+			Lon_CH1((i-1)*4+1+k, (j-1)*4+1) = Nint(L1 + k*mm)
+		End do	
+	End do
+End do
+
+Do i =1, (r4f- r4i)*4+1
+	Do j = 1, Ny-1
+		L1 =  Lat_CH1(i,(j-1)*4+1)	
+		L2 =  Lat_CH1(i,(j-1)*4+1+4)
+		mm = (L2-L1)/4.	
+		If ( abs(L1)<10 .or. abs(L2)<10 ) then 
+			print *, i,j
+		End if	
+		Do k = 1, 3
+			Lat_CH1(i, (j-1)*4+1+k) = Nint(L1 + k*mm)
+		End do		
+		
+		L1 =  Lon_CH1(i,(j-1)*4+1)	
+		L2 =  Lon_CH1(i,(j-1)*4+1+4)
+		mm = (L2-L1)/4.	
+		If ( abs(L1)<10 .or. abs(L2)<10 ) then 
+			print *, i,j
+		End if	
+		Do k = 1, 3
+			Lon_CH1(i, (j-1)*4+1+k) = Nint(L1 + k*mm)
+		End do		
+	End do
+End do
+ 
+! Fin de Geolocalizacion 
        !************* /Latitud y longitud
        
        !************* Altitud
-!       Open(10,FILE='Chile_recortado.dat', IOSTAT=ierror)
-!       Do
-!		read(10,*, IOSTAT=ierror) xx, yy, al
-!		if (ierror/=0) then
-!			write(*,*) xx, yy, al
-!			Exit
+       Open(10,FILE='Chile_recortado.dat', IOSTAT=ierror)
+        Do i=1, NXf
+			Do j = 1, NYf
+				read(10,*, IOSTAT=ierror) al
+				Altura(i,j) = al
+			End do
+		End do
+		
+						
+				
+				
+				
+		!if (ierror/=0) then
+		!	write(*,*) xx, yy, al
+		!	Exit
 !		endif
 !		i=nint((74.+ xx)/0.030042918+1)
 !		j=nint(650-(43.5 + yy)/0.04006163)

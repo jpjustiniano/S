@@ -40,7 +40,7 @@
  real, dimension(:), allocatable :: x, y, xf, yf, hora
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out   	! Matrices de archivo original
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
- real, dimension(:,:), allocatable :: CH1_max, CH1_min  !  Matrices max min
+ Integer, dimension(:,:), allocatable :: CH1_max, CH1_min  !  Matrices max min
  integer, dimension(:,:), allocatable :: Lat_CH1 , Lon_CH1, Lat_CH4 , Lon_CH4
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
@@ -316,6 +316,14 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  G = 0.85 						! cloud asymmetry parameter
  GLINHA = (G - G*G)/(1 - G*G)	! corrected G
  BETA = 0.5 - 3.*GLINHA/8. - 7.*GLINHA**3/128. - 9.*GLINHA**5/128. ! cloud backscatter coefficient
+
+
+ !Lectura de datos climatologicos
+ 
+
+
+
+
 
 
  do rec = 1, Nhora

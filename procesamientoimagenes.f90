@@ -4,6 +4,7 @@
 
 ! gfortran -c -I/usr/include "%f"
 ! gfortran -O3 -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o "%e" "%f"
+! gfortran -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o "procesamientoimagenes" "procesamientoimagenes.f90" 
 ! gfortran -o "%e" "%f" -L/usr/lib  -lnetcdf   ?? de manual...
 
 ! Variable coordinada de lat y long real.
@@ -60,7 +61,7 @@
  real :: x(NX), y(NY), xf(NXf), yf(NYf)
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out   ! Matrices de archivo original
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
- real, dimension(:,:), allocatable :: CH1_max, CH1_min  !  Matrices max min
+ Integer, dimension(:,:), allocatable :: CH1_max, CH1_min  !  Matrices max min
  integer, dimension(:,:), allocatable :: Lat_CH1 , Lon_CH1, Lat_CH4 , Lon_CH4
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
@@ -79,8 +80,8 @@
  
  allocate(CH1_max(NXf,NYf))
  allocate(CH1_min(NXf,NYf))
- CH1_max = 0.
- CH1_min = 20000.
+ CH1_max = 0
+ CH1_min = 20000
  
  allocate (Lat_CH1 ((r4f- r4i)*4+1, (Ny-1)*4+1) )
  allocate (Lon_CH1 ((r4f- r4i)*4+1, (Ny-1)*4+1) )
@@ -285,8 +286,8 @@ End do
 	
     call check( nf90_def_var(ncid, "CH1", NF90_SHORT, dimids_fine, CH1_varid) )  ! Define the variable and type. 
     call check( nf90_def_var(ncid, "CH4", NF90_SHORT, dimids, CH4_varid) )		!  NF90_Short (2-byte integer)
-    call check( nf90_def_var(ncid, "CH1_max", NF90_FLOAT, dimids2df, CH1_max_varid) )
-    call check( nf90_def_var(ncid, "CH1_min", NF90_FLOAT, dimids2df, CH1_min_varid) )
+    call check( nf90_def_var(ncid, "CH1_max", NF90_SHORT, dimids2df, CH1_max_varid) )
+    call check( nf90_def_var(ncid, "CH1_min", NF90_SHORT, dimids2df, CH1_min_varid) )
     call check( nf90_def_var(ncid, "Lat_CH4", NF90_SHORT, dimids2d, Lat_CH4_varid) )
     call check( nf90_def_var(ncid, "Lon_CH4", NF90_SHORT, dimids2d, Lon_CH4_varid) )
     call check( nf90_def_var(ncid, "Lat_CH1", NF90_SHORT, dimids2df, Lat_CH1_varid) )
@@ -342,6 +343,9 @@ End do
     
     call check( nf90_put_att(ncid, hora_varid, "units", "UTC_hours_from_day1"))
     call check( nf90_put_att(ncid, hora_varid, "_CoordinateAxisType", "time"))
+    
+    call check( nf90_put_att(ncid, CH1_max_varid, "scale_factor", 0.01) )
+    call check( nf90_put_att(ncid, CH1_min_varid, "scale_factor", 0.01) )
 
     ! Atributos globales    
     call check( nf90_put_att(ncid, NF90_GLOBAL, "imagenes", "media_hora") )
@@ -419,9 +423,11 @@ End do
     do j = 1, NYf
 		! Calculo de maximo y minimo mensual
 		if (CH1_in(i,j) > CH1_max(i,j)) then
+			If (CH1_in(i,j) > 32767) CH1_in(i,j) = 32767
 			CH1_max(i,j) = CH1_in(i,j)
 		end if 								!Separado por si es una imagen, junto es mas rapido.
 		if (CH1_in(i,j) < CH1_min(i,j)) then
+			If (CH1_in(i,j) < -32767) CH1_in(i,j) = -32767
 			CH1_min(i,j) = CH1_in(i,j)
 		end if
 		! Correccion de datos 
