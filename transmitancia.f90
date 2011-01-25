@@ -151,6 +151,9 @@
  allocate(Global(NXf,NYf))
  allocate(Difusa(NXf,NYf))
  allocate(Directa(NXf,NYf))
+ Global = -3
+ Difusa = -3
+ Directa= -3
  
  allocate (Lat_CH1 (NXf, NYf) )
  allocate (Lon_CH1 (NXf, NYf) )
@@ -211,8 +214,8 @@
  call check( nf90_def_var(ncid_rad, "Global", NF90_SHORT, dimids, Global_varid) )
  call check( nf90_def_var(ncid_rad, "Difusa", NF90_SHORT, dimids, Difusa_varid) )
  call check( nf90_def_var(ncid_rad, "Directa", NF90_SHORT, dimids, Directa_varid) )
- call check( nf90_def_var(ncid_rad, "XKT", NF90_SHORT, dimids, XKT_varid) )
- call check( nf90_def_var(ncid_rad, "XKD", NF90_SHORT, dimids, XKD_varid) )
+! call check( nf90_def_var(ncid_rad, "XKT", NF90_SHORT, dimids, XKT_varid) )
+! call check( nf90_def_var(ncid_rad, "XKD", NF90_SHORT, dimids, XKD_varid) )
  call check( nf90_def_var(ncid_rad, "Lat_CH4", NF90_SHORT, dimids2d, Lat_CH4_rad_varid) )
  call check( nf90_def_var(ncid_rad, "Lon_CH4", NF90_SHORT, dimids2d, Lon_CH4_rad_varid) )
  call check( nf90_def_var(ncid_rad, "Lat_CH1", NF90_SHORT, dimids2df, Lat_CH1_rad_varid) )
@@ -248,17 +251,17 @@
  call check( nf90_put_att(ncid_rad, Directa_varid, "_CoordinateAxes", "time Lat_CH1 Lon_CH1") )
  call check( nf90_put_att(ncid_rad, Directa_varid, "standard_name", "Radiación Global") )
  
- call check( nf90_put_att(ncid_rad, XKT_varid, "units", "-") )
- call check( nf90_put_att(ncid_rad, XKT_varid, "missing_value", valid_min) )
- call check( nf90_put_att(ncid_rad, XKT_varid, "valid_min", valid_min) )
- call check( nf90_put_att(ncid_rad, XKT_varid, "valid_max", 150) )
- call check( nf90_put_att(ncid_rad, XKT_varid, "scale_factor", 0.01) )
+! call check( nf90_put_att(ncid_rad, XKT_varid, "units", "-") )
+! call check( nf90_put_att(ncid_rad, XKT_varid, "missing_value", valid_min) )
+! call check( nf90_put_att(ncid_rad, XKT_varid, "valid_min", valid_min) )
+! call check( nf90_put_att(ncid_rad, XKT_varid, "valid_max", 150) )
+! call check( nf90_put_att(ncid_rad, XKT_varid, "scale_factor", 0.01) )
  
- call check( nf90_put_att(ncid_rad, XKD_varid, "units", "-") )
- call check( nf90_put_att(ncid_rad, XKD_varid, "missing_value", valid_min) )
- call check( nf90_put_att(ncid_rad, XKD_varid, "valid_min", valid_min) )
- call check( nf90_put_att(ncid_rad, XKD_varid, "valid_max", 150) )
- call check( nf90_put_att(ncid_rad, XKD_varid, "scale_factor", 0.01) )
+! call check( nf90_put_att(ncid_rad, XKD_varid, "units", "-") )
+! call check( nf90_put_att(ncid_rad, XKD_varid, "missing_value", valid_min) )
+! call check( nf90_put_att(ncid_rad, XKD_varid, "valid_min", valid_min) )
+! call check( nf90_put_att(ncid_rad, XKD_varid, "valid_max", 150) )
+! call check( nf90_put_att(ncid_rad, XKD_varid, "scale_factor", 0.01) )
 
  ! Atributos de Geolocalizacion
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "units", "degrees_north"))
@@ -390,7 +393,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		THETA  = ACOS(COSZEN)/CDR
 		XI0   = 1367.00*E0*COSZEN
 		
-!$omp parallel private(XIM,vis,Alt,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,Dir,XXKT,XXKD,Dif,Glob,TCLEARn,TDIRn,TCLOUDn)
+!$omp parallel private(XIM,vis,Alt,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,Dir,Dif,Glob,TCLEARn,TDIRn,TCLOUDn)
 !$omp do
 		Do i=1, NXf
 			! Lectura de archivo con valores de temperatura, HR, vis., albedo y altura, lat y long.
@@ -454,7 +457,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			!calculate Global radiation 
 			Glob  = XI0 *((1.0 - XIM) * (TCLEARn - TCLOUDn) + TCLOUDn)
 			if (Glob < 0.0)  Glob = 0.
-			XXKT=Glob/XI0
+			!XXKT=Glob/XI0
 			
 			XIM = 1.0 - XIM		!!
 			
@@ -479,20 +482,20 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			IF(Dir < 0.0) Dir = 0.0
 			IF(Dif < 0.0) Dif = -1.
 			
-			if(XXKT < 0.0) then
-				XXKD=XXKT
-			else
-				XXKD=Dif/XI0
-				if (XXKD > XXKT) XXKD = XXKT
-			End if
-			
-			IF (XXKD > XXKT) XXKD = XXKT
+!~ 			if(XXKT < 0.0) then
+!~ 				XXKD=XXKT
+!~ 			else
+!~ 				XXKD=Dif/XI0
+!~ 				if (XXKD > XXKT) XXKD = XXKT
+!~ 			End if
+!~ 			
+!~ 			IF (XXKD > XXKT) XXKD = XXKT
 						
 			Directa(i,j) = NInt(Dir*10)
 			Difusa (i,j) = NInt(Dif*10)
 			Global(i,j)  = NInt(Glob*10)			
-			XKT(i,j)  = NInt(XXKT*100)
-			XKD(i,j)  = NInt(XXKD*100)
+!~ 			XKT(i,j)  = NInt(XXKT*100)
+!~ 			XKD(i,j)  = NInt(XXKD*100)
 			
 			Else  ! Si esta fuera de territorio Chileno.
 				!Directa(i,j) = -1.0
