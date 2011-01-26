@@ -1,9 +1,6 @@
 ! Copyright (C) 2010, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
 ! Programa para el calculo de la radiacion Global, Difusa y Directa.
 
-! gfortran -g -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o transmitancia transmitancia.f90 Atmosphe.o Strpsrb.o Astro.o
-! gfortran -O3 -fopenmp -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o transmitanciaOMP transmitancia.f90 Strpsrb.f90 Astro.f90 
-
 ! Revisar:
 !	Revisar que pasa  con pixeles en borde donde no es procesado el pixel lateral
 !	Almacenaje de variables Global, Difusa y Directa. Kt, Kd en matris interna.
@@ -214,8 +211,6 @@
  call check( nf90_def_var(ncid_rad, "Global", NF90_SHORT, dimids, Global_varid) )
  call check( nf90_def_var(ncid_rad, "Difusa", NF90_SHORT, dimids, Difusa_varid) )
  call check( nf90_def_var(ncid_rad, "Directa", NF90_SHORT, dimids, Directa_varid) )
-! call check( nf90_def_var(ncid_rad, "XKT", NF90_SHORT, dimids, XKT_varid) )
-! call check( nf90_def_var(ncid_rad, "XKD", NF90_SHORT, dimids, XKD_varid) )
  call check( nf90_def_var(ncid_rad, "Lat_CH4", NF90_SHORT, dimids2d, Lat_CH4_rad_varid) )
  call check( nf90_def_var(ncid_rad, "Lon_CH4", NF90_SHORT, dimids2d, Lon_CH4_rad_varid) )
  call check( nf90_def_var(ncid_rad, "Lat_CH1", NF90_SHORT, dimids2df, Lat_CH1_rad_varid) )
@@ -251,18 +246,6 @@
  call check( nf90_put_att(ncid_rad, Directa_varid, "_CoordinateAxes", "time Lat_CH1 Lon_CH1") )
  call check( nf90_put_att(ncid_rad, Directa_varid, "standard_name", "Radiación Global") )
  
-! call check( nf90_put_att(ncid_rad, XKT_varid, "units", "-") )
-! call check( nf90_put_att(ncid_rad, XKT_varid, "missing_value", valid_min) )
-! call check( nf90_put_att(ncid_rad, XKT_varid, "valid_min", valid_min) )
-! call check( nf90_put_att(ncid_rad, XKT_varid, "valid_max", 150) )
-! call check( nf90_put_att(ncid_rad, XKT_varid, "scale_factor", 0.01) )
- 
-! call check( nf90_put_att(ncid_rad, XKD_varid, "units", "-") )
-! call check( nf90_put_att(ncid_rad, XKD_varid, "missing_value", valid_min) )
-! call check( nf90_put_att(ncid_rad, XKD_varid, "valid_min", valid_min) )
-! call check( nf90_put_att(ncid_rad, XKD_varid, "valid_max", 150) )
-! call check( nf90_put_att(ncid_rad, XKD_varid, "scale_factor", 0.01) )
-
  ! Atributos de Geolocalizacion
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "units", "degrees_north"))
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "missing_value", -32767) )
@@ -411,7 +394,8 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			
 		  IF ( Alt > 0. ) THEN 
 			! Calculo de Cobertura de nubes.
-			XIM =  (CH1_in(i,j)-CH1_max(i,j))/(CH1_min(i,j)-CH1_max(i,j) ) 
+			XIM =  (CH1_in(i,j)-CH1_max(i,j))/((CH1_min(i,j)-CH1_max(i,j) ) *1.)
+			!print *, CH1_in(i,j),CH1_max(i,j), CH1_min(i,j), XIM
 			XIM = 1.0 - XIM			! cloud cover coefficient from satellite data
 			! calculation of the visibility at the station as function of visibility and altitude
 			 vis   = vis * EXP( (LOG(100.0/vis)/1000.0)*Alt )
@@ -457,7 +441,6 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			!calculate Global radiation 
 			Glob  = XI0 *((1.0 - XIM) * (TCLEARn - TCLOUDn) + TCLOUDn)
 			if (Glob < 0.0)  Glob = 0.
-			!XXKT=Glob/XI0
 			
 			XIM = 1.0 - XIM		!!
 			
@@ -481,29 +464,15 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			
 			IF(Dir < 0.0) Dir = 0.0
 			IF(Dif < 0.0) Dif = -1.
-			
-!~ 			if(XXKT < 0.0) then
-!~ 				XXKD=XXKT
-!~ 			else
-!~ 				XXKD=Dif/XI0
-!~ 				if (XXKD > XXKT) XXKD = XXKT
-!~ 			End if
-!~ 			
-!~ 			IF (XXKD > XXKT) XXKD = XXKT
 						
 			Directa(i,j) = NInt(Dir*10)
 			Difusa (i,j) = NInt(Dif*10)
 			Global(i,j)  = NInt(Glob*10)			
-!~ 			XKT(i,j)  = NInt(XXKT*100)
-!~ 			XKD(i,j)  = NInt(XXKD*100)
 			
 			Else  ! Si esta fuera de territorio Chileno.
-				!Directa(i,j) = -1.0
-				!Difusa (i,j) = -1.0
-				!Global(i,j)  = -1.0
-				!XKT(i,j)  = -1.0
-				!XKD(i,j)  = -1.0 
-		  
+				Directa(i,j) = -1.0
+				Difusa (i,j) = -1.0
+				Global(i,j)  = -1.0
 			End if  ! Fin de procesamiento de pixel con altura > 0.
 		
 		End do

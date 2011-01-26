@@ -2,11 +2,6 @@
 ! Programa para el filtraje y almacenamiento de imagenes satelitales en un archivo mensual.
 ! Funciona con horas en UTC.
 
-! gfortran -c -I/usr/include "%f"
-! gfortran -O3 -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o "%e" "%f"
-! gfortran -I/usr/include -L/usr/lib -lnetcdff -lnetcdf -o "procesamientoimagenes" "procesamientoimagenes.f90" 
-! gfortran -o "%e" "%f" -L/usr/lib  -lnetcdf   ?? de manual...
-
 ! Variable coordinada de lat y long real.
 ! Coordinar las variables de entrada en las mismas coordenadas
 ! Procesamiento de solo Chile. Eliminar fuera de fronteras.
@@ -42,7 +37,7 @@
  Real    :: az,el,ha,dec,soldst
  character (30) :: argument  ! Nombre de archivo de lista
  character (30) :: filename  ! Nombres dentro de la lista
- character (12) :: filename_out
+ character (23) :: filename_out
  character (len = 27) :: string
  integer :: i=1,j=1, rec=1, noct= 0, k
  logical :: flag1= .false.
@@ -59,10 +54,13 @@
  integer, parameter :: NDIMS = 3, NDIMS_IN = 2	      ! We are writing 2D data.
 
  real :: x(NX), y(NY), xf(NXf), yf(NYf)
- integer, dimension(:,:), allocatable :: CH1_out, CH4_out   ! Matrices de archivo original
- integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
- Integer, dimension(:,:), allocatable :: CH1_max, CH1_min  !  Matrices max min
- integer, dimension(:,:), allocatable :: Lat_CH1 , Lon_CH1, Lat_CH4 , Lon_CH4
+ integer, dimension (9020, 1728) :: CH1_out
+ integer, dimension (Nlon,NLat) :: CH4_out   ! Matrices de archivo original
+ integer, dimension(NX,NY)   :: CH4_in
+ integer, dimension(NXf,NYf) :: CH1_in        !  Matrices de archivo recortado
+ Integer, dimension(NXf,NYf) :: CH1_max, CH1_min  !  Matrices max min
+ integer, dimension((r4f- r4i)*4+1, (Ny-1)*4+1)) :: Lat_CH1 , Lon_CH1
+ integer, dimension (Nx,Ny)  :: Lat_CH4 , Lon_CH4
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
@@ -73,20 +71,8 @@
  integer :: start(NDIMS), startf(NDIMS), count(NDIMS), countf(NDIMS), start_hora(1)
  integer :: dimids(NDIMS), dimids_fine(NDIMS), dimids2d(NDIMS_IN), dimids2df(NDIMS_IN)
    
- allocate(CH1_out (9020, 1728))   ! Allocate memory for data.
- allocate(CH4_out (Nlon,NLat))     ! Lectura de variables de archivo original
- allocate(CH1_in (NXf,NYf))       ! imagenes invertidas
- allocate(CH4_in(NX,NY))
- 
- allocate(CH1_max(NXf,NYf))
- allocate(CH1_min(NXf,NYf))
  CH1_max = 0
  CH1_min = 20000
- 
- allocate (Lat_CH1 ((r4f- r4i)*4+1, (Ny-1)*4+1) )
- allocate (Lon_CH1 ((r4f- r4i)*4+1, (Ny-1)*4+1) )
- allocate (Lat_CH4 (Nx, Ny) )
- allocate (Lon_CH4 (Nx, Ny) )
  
 !********************************************************** Fin declaracion Variables
  
@@ -254,12 +240,12 @@ End do
 		& tiempo(7)-tiempof(7), 'sec.'
 	End if	
     flag1 = .true.
-    
-    If (imes < 10 ) then
-		filename_out = ano//'0'//mes//'.nc'
-	Else
-		filename_out = ano//mes//'.nc'
-	End if
+    filename_out = ano//mes//'.media_hora.nc'
+!    If (imes < 10 ) then
+!		filename_out = ano//'0'//mes//'.nc'
+!	Else
+!		filename_out = ano//mes//'.nc'
+!	End if
     write (*,*) filename_out
     write (16,*) filename_out
     write (16,*)
@@ -295,7 +281,7 @@ End do
 
     ! Atributos de Geolocalizacion
     call check( nf90_put_att(ncid, Lat_CH4_varid, "units", "degrees_north"))
-    call check( nf90_put_att(ncid, Lat_CH4_varid, "missing_value", -32768) )
+    call check( nf90_put_att(ncid, Lat_CH4_varid, "missing_value", -300) )
     call check( nf90_put_att(ncid, Lat_CH4_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, Lat_CH4_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, Lat_CH4_varid, "scale_factor", 0.01) )
@@ -303,7 +289,7 @@ End do
     call check( nf90_put_att(ncid, Lat_CH4_varid, "standard_name", "Latitud_CH4") )
     
     call check( nf90_put_att(ncid, Lon_CH4_varid, "units", "degrees_east") )
-    call check( nf90_put_att(ncid, Lon_CH4_varid, "missing_value", -32768) )
+    call check( nf90_put_att(ncid, Lon_CH4_varid, "missing_value", -300) )
     call check( nf90_put_att(ncid, Lon_CH4_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, Lon_CH4_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, Lon_CH4_varid, "scale_factor", 0.01) )
@@ -311,14 +297,14 @@ End do
     call check( nf90_put_att(ncid, Lon_CH4_varid, "standard_name", "Longitud_CH4") )
         
     call check( nf90_put_att(ncid, Lat_CH1_varid, "units", "degrees_north"))
-    call check( nf90_put_att(ncid, Lat_CH1_varid, "missing_value", -32768) )
+    call check( nf90_put_att(ncid, Lat_CH1_varid, "missing_value", -300) )
     call check( nf90_put_att(ncid, Lat_CH1_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, Lat_CH1_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, Lat_CH1_varid, "scale_factor", 0.01) )
     call check( nf90_put_att(ncid, Lat_CH1_varid, "_CoordinateAxisType", "Lat_CH1") )
     
     call check( nf90_put_att(ncid, Lon_CH1_varid, "units", "degrees_east") )
-    call check( nf90_put_att(ncid, Lon_CH1_varid, "missing_value", -32768) )
+    call check( nf90_put_att(ncid, Lon_CH1_varid, "missing_value", -300) )
     call check( nf90_put_att(ncid, Lon_CH1_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, Lon_CH1_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, Lon_CH1_varid, "scale_factor", 0.01) )
@@ -326,7 +312,7 @@ End do
      
     ! Atributos variables
     call check( nf90_put_att(ncid, CH1_varid, "units", "Albedo*100%") )
-    call check( nf90_put_att(ncid, CH1_varid, "missing_value", -32768) )
+    call check( nf90_put_att(ncid, CH1_varid, "missing_value", -300) )
     call check( nf90_put_att(ncid, CH1_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, CH1_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, CH1_varid, "scale_factor", 0.01) )
@@ -334,7 +320,7 @@ End do
     call check( nf90_put_att(ncid, CH1_varid, "standard_name", "Canal Visible") )
 
     call check( nf90_put_att(ncid, CH4_varid, "units", "temp_deg_C") )
-    call check( nf90_put_att(ncid, CH4_varid, "missing_value", -32768) )
+    call check( nf90_put_att(ncid, CH4_varid, "missing_value", -300) )
     call check( nf90_put_att(ncid, CH4_varid, "valid_min", -32768) )
     call check( nf90_put_att(ncid, CH4_varid, "valid_max", 32768) )
     call check( nf90_put_att(ncid, CH4_varid, "scale_factor", 0.01) )
@@ -365,23 +351,23 @@ End do
     call check( nf90_enddef(ncid) )
     !*********************************************************************** Fin Definiciones NetCDF	
    
-   x(1) = -66.
-   y(1) = -17. 
-   xf(1) = -66.
-   yf(1) = -17. 
+!   x(1) = -66.
+!   y(1) = -17. 
+!   xf(1) = -66.
+!   yf(1) = -17. 
 
-    do i = 2, NX 	! Guardar coordenadas de lat y lon.
-        x(i) =  x(i-1) - 0.02
-    end do
-    do j = 2, NY
-        y(j) = y(j-1) - 0.0624
-    end do	
-    do i = 2, NXf
-        xf(i) = xf(i-1) - 0.005
-    end do
-    do j = 2, NYf
-        yf(j) = yf(j-1) - 0.0156
-    end do	
+!    do i = 2, NX 	! Guardar coordenadas de lat y lon.
+!        x(i) =  x(i-1) - 0.02
+!    end do
+!    do j = 2, NY
+!        y(j) = y(j-1) - 0.0624
+!    end do	
+!    do i = 2, NXf
+!        xf(i) = xf(i-1) - 0.005
+!    end do
+!    do j = 2, NYf
+!        yf(j) = yf(j-1) - 0.0156
+!    end do	
 
     ! Write the coordinate variable data. This will put the latitudes
     ! and longitudes of our data grid into the netCDF file.
