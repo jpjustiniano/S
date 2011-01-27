@@ -13,35 +13,38 @@
    integer, parameter :: r4i = 1095, r4f = 1368 , r1i = r4i*4, r1f = r4f*4 !
    integer, parameter :: NLat= 432, Nlon= 2255
    integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny-1)*4+1
-   integer, dimension (NX,NY) :: Altura , Temperatura, HR, Visibilidad
+   real, dimension (NXf,NYf) :: Altura , Temperatura, HR, Visibilidad
    integer, dimension ((r4f- r4i)*4+1, (Ny-1)*4+1) :: Lat_CH1 , Lon_CH1
    integer, dimension (Nx, Ny)  :: Lat_CH4 , Lon_CH4
    integer, dimension (Nlon,NLat) :: Latitud , Longitud
   
-   integer :: x_dimid, y_dimid
-   integer :: x_varid, y_varid       
+   integer :: x_dimid, y_dimid, mes_dimid
+   integer :: x_varid, y_varid, mes_varid       
    integer :: Alt_varid, Temp_varid, HR_varid, Vis_varid
    integer :: dimids(NDIMS), dimids3d(3), rec(3)
    
-   integer :: i=1,j=1, lat, lon, k
+   integer :: i=1,j=1, lat, lon, k, count(3), start(3)
    Integer :: L1, L2
    Integer :: ierror
    Real :: mm, al
+   Character(1) :: c1i
    Character(2) :: ci
    Character(60) ::filename
 	   
    !*********************************************************************** Fin declaracion Variables
    call check( nf90_create(FILE_NAME, NF90_CLOBBER, ncid) ) ! f90_clobber overwrite this file if it already exists.
  
-   call check( nf90_def_dim(ncid, "x", NX, x_dimid) )  ! Define the dimensions. 
-   call check( nf90_def_dim(ncid, "y", NY, y_dimid) )
+   call check( nf90_def_dim(ncid, "x", NXf, x_dimid) )  ! Define the dimensions. 
+   call check( nf90_def_dim(ncid, "y", NYf, y_dimid) )
+   call check( nf90_def_dim(ncid, "mes", 12, mes_dimid) )
    
-   dimids =  (/ x_dimid, y_dimid/) ! The dimids array is used to pass the IDs of the dimensions
+   dimids =  (/ x_dimid, y_dimid/)
+   dimids3d = (/ x_dimid, y_dimid, mes_dimid  /)
    
-   call check( nf90_def_var(ncid, "Alt", NF90_INT, dimids, Alt_varid) )  ! Define the variable and type. NF90_INT (4-byte integer)
-   call check( nf90_def_var(ncid, "Temp", NF90_INT, dimids, Temp_varid) )
-   call check( nf90_def_var(ncid, "HR", NF90_INT, dimids, HR_varid) )
-   call check( nf90_def_var(ncid, "Vis", NF90_INT, dimids, Vis_varid) )
+   call check( nf90_def_var(ncid, "Alt", NF90_float, dimids, Alt_varid) )  ! Define the variable and type. NF90_INT (4-byte integer)
+   call check( nf90_def_var(ncid, "Temp", NF90_float, dimids, Temp_varid) )
+   call check( nf90_def_var(ncid, "HR", NF90_float, dimids, HR_varid) )
+   call check( nf90_def_var(ncid, "Vis", NF90_float, dimids, Vis_varid) )
    
    call check( nf90_put_att(ncid, Alt_varid, "units", "meters") )
    call check( nf90_put_att(ncid, Alt_varid, "long_name", "Altitud") ) 
@@ -132,7 +135,7 @@ End do
        !************* /Latitud y longitud
        
        !************* Altitud
-       Open(10,FILE='./Altura/Altura.media_hora.txt', IOSTAT=ierror)
+       Open(10,FILE='./Altura/Altura.media_hora.corregido2.txt', IOSTAT=ierror)
         Do i=1, NXf
 			Do j = 1, NYf
 				read(10,*, IOSTAT=ierror) al
@@ -144,51 +147,58 @@ End do
        call check( nf90_put_var(ncid, Alt_varid, Altura) )
        !************* /Altitud
        
-       !************* Temperatura
-	Do k = 1, 12
-	   start(3) = k 
-	   
-	   If ( k<10) write (ci,'(I1)') k 
-	   If ( k>=10) write (ci,'(I2)') k 
-	   
-       filename= './Temperetura/Temperatura.'//ci//'.media_hora.txt'
-       Open(10,FILE=filename, IOSTAT=ierror)
-       Do  i=1, NXf
-          Do j = 1, NYf
-			read(10,*, IOSTAT=ierror) al
-            Temperatura(i,j) = Nint(al*100)
-          end do
-       end do
-       close (10)
-       call check( nf90_put_var(ncid, temp_varid, Temperatura, start, count) )
-	End do
-       !************* /Temperatura
+!       !************* Temperatura
+!	Do k = 1, 12
+!	   start(3) = k 
+	      
+!	   If ( k<10) then
+!	    write (c1i,'(I1)') k 
+!	    filename= './Temperatura/Temperatura.'//c1i//'.media_hora.txt'
+!	   else
+!	   	write (c1i,'(I2)') k 
+!	    filename= './Temperatura/Temperatura.'//ci//'.media_hora.txt'
+!	   end if 
        
-       !************* Visibilidad
-       Open(10,FILE='Visibilidad.media_hora.txt', IOSTAT=ierror)
-       Do  i=1, NXf
-          Do j = 1, NYf
-			read(10,*, IOSTAT=ierror) al
-             Visibilidad (i,j) = al
-          end do
-       end do
+!       Open(10,FILE=filename, IOSTAT=ierror)
+!       If (ierror/=0) print *,'No se puede abrir:',filename,k
+!!       Do  i=1, NXf
+!!          Do j = 1, NYf
+!!			read(10,*, IOSTAT=ierror) al 
+!!			If (ierror/=0) print *,'No se puede leer (i,j): ',i, j,k ,filename
+!!            Temperatura(i,j) = Nint(al*100)
+!!          end do
+!!       end do
+!		 read(10,*) Temperatura(i,j)
+!       close (10)
+!       call check( nf90_put_var(ncid, temp_varid, Temperatura, start, count) )
+!	End do
+!       !************* /Temperatura
        
-       close (10)
-       call check( nf90_put_var(ncid, Vis_varid, Visibilidad) )
-       !************* /Visibilidad       
+!       !************* Visibilidad
+!       Open(10,FILE='Visibilidad.media_hora.txt', IOSTAT=ierror)
+!       Do  i=1, NXf
+!          Do j = 1, NYf
+!			read(10,*, IOSTAT=ierror) al
+!             Visibilidad (i,j) = al
+!          end do
+!       end do
        
-       !************* HR
-       Open(10,FILE='HR.media_hora.txt', IOSTAT=ierror)
-       Do  i=1, NXf
-          Do j = 1, NYf
-			read(10,*, IOSTAT=ierror) al
-             HR (i,j) = al
-          end do
-       end do
+!       close (10)
+!       call check( nf90_put_var(ncid, Vis_varid, Visibilidad) )
+!       !************* /Visibilidad       
        
-       close (10)
-       call check( nf90_put_var(ncid, Vis_varid, HR) )
-       !************* /HR  
+!       !************* HR
+!       Open(10,FILE='HR.media_hora.txt', IOSTAT=ierror)
+!       Do  i=1, NXf
+!          Do j = 1, NYf
+!			read(10,*, IOSTAT=ierror) al
+!             HR (i,j) = al
+!          end do
+!       end do
+       
+!       close (10)
+!       call check( nf90_put_var(ncid, Vis_varid, HR) )
+!       !************* /HR  
 		
        call check( nf90_close(ncid) ) ! Close the file.
      
