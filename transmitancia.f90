@@ -88,7 +88,7 @@
  TID = 1
  !$    TID = omp_get_num_procs();
  !$    call OMP_SET_NUM_THREADS(TID)
- 
+ print *, ' Numero de procesadores en uso: ',TID
  call date_and_time(DATE=fecha, VALUES=tiempo)
  open (unit=16, file='log_trans.txt')
  
@@ -384,7 +384,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			 
 		  Temp = 293. ! (K)
 		  Alt = 500. 	! (m)
-		  HR = .4 	! (0-1. )
+		  HR = .4 	! (0-1. ) 
 		  albedo = .20! (0-1.)
 		  vis = 10.	! (km)
 			
@@ -394,9 +394,11 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			
 		  IF ( Alt > 0. ) THEN 
 			! Calculo de Cobertura de nubes.
-			XIM =  (CH1_in(i,j)-CH1_max(i,j))/((CH1_min(i,j)-CH1_max(i,j) ) *1.)
+			XIM =  (CH1_in(i,j)-CH1_min(i,j))/((CH1_max(i,j)-CH1_min(i,j) ) *1.)
 			!print *, CH1_in(i,j),CH1_max(i,j), CH1_min(i,j), XIM
-			XIM = 1.0 - XIM			! cloud cover coefficient from satellite data
+			
+			!if ( CH1_max(i,j) < 3000 ) XIM = 0.05
+			
 			! calculation of the visibility at the station as function of visibility and altitude
 			 vis   = vis * EXP( (LOG(100.0/vis)/1000.0)*Alt )
 			! test for visibility between 2 and 150 km

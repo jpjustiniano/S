@@ -44,7 +44,7 @@
  integer,dimension(8) :: tiempo, tiempof
  integer, parameter :: r4i = 1095, r4f = 1368 , r1i = r4i*4, r1f = r4f*4 ! CH1: 4380 a 5472
  integer, parameter :: NLat= 432, Nlon= 2255
- integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny-1)*4+1
+ integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny)*4
  integer, dimension (Nlon,NLat) :: Latitud , Longitud
  Integer :: L1, L2
  Real :: mm
@@ -59,7 +59,7 @@
  integer, dimension(NX,NY)   :: CH4_in
  integer, dimension(NXf,NYf) :: CH1_in        !  Matrices de archivo recortado
  Integer, dimension(NXf,NYf) :: CH1_max, CH1_min  !  Matrices max min
- integer, dimension((r4f- r4i)*4+1, (Ny-1)*4+1)) :: Lat_CH1 , Lon_CH1
+ integer, dimension((r4f- r4i)*4+1, (Ny-1)*4+1) :: Lat_CH1 , Lon_CH1
  integer, dimension (Nx,Ny)  :: Lat_CH4 , Lon_CH4
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
@@ -67,6 +67,10 @@
  integer :: CH1_varid, Ch4_varid
  integer :: CH1_max_varid, CH1_min_varid
  integer :: Lat_CH4_varid, Lon_CH4_varid , Lat_CH1_varid, Lon_CH1_varid
+ 
+ !dia Max y min
+ integer :: diamax_varid, diamin_varid
+ integer, dimension(NXf,NYf) :: diamax, diamin
  
  integer :: start(NDIMS), startf(NDIMS), count(NDIMS), countf(NDIMS), start_hora(1)
  integer :: dimids(NDIMS), dimids_fine(NDIMS), dimids2d(NDIMS_IN), dimids2df(NDIMS_IN)
@@ -182,6 +186,9 @@ End do
     
     call check( nf90_put_var(ncid, CH1_max_varid, CH1_max) )
     call check( nf90_put_var(ncid, CH1_min_varid, CH1_min) )
+    call check( nf90_put_var(ncid, diamax_varid, diamax) )
+    call check( nf90_put_var(ncid, diamin_varid, diamin) )
+    
         
 	call check( nf90_close(ncid) )
 	
@@ -278,6 +285,8 @@ End do
     call check( nf90_def_var(ncid, "Lon_CH4", NF90_SHORT, dimids2d, Lon_CH4_varid) )
     call check( nf90_def_var(ncid, "Lat_CH1", NF90_SHORT, dimids2df, Lat_CH1_varid) )
     call check( nf90_def_var(ncid, "Lon_CH1", NF90_SHORT, dimids2df, Lon_CH1_varid) )
+    call check( nf90_def_var(ncid, "diamax", NF90_SHORT, dimids2df, diamax_varid) )
+    call check( nf90_def_var(ncid, "diamin", NF90_SHORT, dimids2df, diamin_varid) )
 
     ! Atributos de Geolocalizacion
     call check( nf90_put_att(ncid, Lat_CH4_varid, "units", "degrees_north"))
@@ -407,15 +416,19 @@ End do
  ! Revision de matriz
  do i = 1, NXf
     do j = 1, NYf
+	!If (ihora > 16.1 .and. ihora < 16.2) then
 		! Calculo de maximo y minimo mensual
 		if (CH1_in(i,j) > CH1_max(i,j)) then
 			If (CH1_in(i,j) > 32767) CH1_in(i,j) = 32767
 			CH1_max(i,j) = CH1_in(i,j)
+			diamax (i,j) = rec
 		end if 								!Separado por si es una imagen, junto es mas rapido.
 		if (CH1_in(i,j) < CH1_min(i,j)) then
 			If (CH1_in(i,j) < -32767) CH1_in(i,j) = -32767
 			CH1_min(i,j) = CH1_in(i,j)
+			diamin (i,j) = rec
 		end if
+	!end if
 		! Correccion de datos 
 		if (CH1_in(i,j) > 15000) then
             write (16,*) "CH1_in(", i, ",",j, ") =", CH1_in(i, j) , filename, iano,diaj,ihora,"Corregido, vecinos"
