@@ -37,15 +37,26 @@
  real, dimension(:), allocatable :: x, y, xf, yf, hora
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out   	! Matrices de archivo original
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
- Integer, dimension(:,:), allocatable :: CH1_max, CH1_min  !  Matrices max min
+ Integer, dimension(:,:), allocatable :: max1040,max1110,max1140,max1240,max1310,max1340,max1410,max1440,max1610
+ Integer, dimension(:,:), allocatable :: min1040,min1110,min1140,min1240,min1310,min1340,min1410,min1440,min1610
+ Integer, dimension(:,:), allocatable :: max1640, max1710,max1740,max1840,max1910,max1940,max2010,max2040,max2140
+ Integer, dimension(:,:), allocatable :: min1640, min1710,min1740,min1840,min1910,min1940,min2010,min2040,min2140
+ Integer, dimension(:,:), allocatable :: max2210, min2210, max2240, min2240
  integer, dimension(:,:), allocatable :: Lat_CH1 , Lon_CH1, Lat_CH4 , Lon_CH4
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
  integer :: CH1_varid, Ch4_varid
- integer :: CH1_max_varid, CH1_min_varid, CH4_max_varid, CH4_min_varid
  integer :: Lat_CH4_varid, Lon_CH4_varid , Lat_CH1_varid, Lon_CH1_varid
  integer :: Lat_CH4_rad_varid, Lon_CH4_rad_varid , Lat_CH1_rad_varid, Lon_CH1_rad_varid
+ integer :: max1040_varid, max1110_varid, max1140_varid, max1240_varid, max1310_varid, max1340_varid
+ integer :: max1410_varid, max1440_varid, max1610_varid, max1640_varid, max1710_varid, max1740_varid
+ integer :: max1840_varid, max1910_varid, max1940_varid, max2010_varid, max2040_varid, max2140_varid
+ integer :: max2210_varid, max2240_varid
+ integer :: min1040_varid, min1110_varid, min1140_varid, min1240_varid, min1310_varid, min1340_varid
+ integer :: min1410_varid, min1440_varid, min1610_varid, min1640_varid, min1710_varid, min1740_varid
+ integer :: min1840_varid, min1910_varid, min1940_varid, min2010_varid, min2040_varid, min2140_varid
+ integer :: min2210_varid, min2240_varid
  
  integer :: start(NDIMS), count(NDIMS), countf(NDIMS)
  integer :: dimids(NDIMS), dimids_fine(NDIMS), dimids2d(NDIMS_IN), dimids2df(NDIMS_IN)
@@ -106,12 +117,58 @@
 
  call check( nf90_inq_varid(ncid, "CH1", CH1_varid) )
  call check( nf90_inq_varid(ncid, "CH4", CH4_varid) )
- call check( nf90_inq_varid(ncid, "CH1_max", CH1_max_varid) )
- call check( nf90_inq_varid(ncid, "CH1_min", CH1_min_varid) )
  call check( nf90_inq_varid(ncid, "Lat_CH4", Lat_CH4_varid) )
  call check( nf90_inq_varid(ncid, "Lon_CH4", Lon_CH4_varid) )
  call check( nf90_inq_varid(ncid, "Lat_CH1", Lat_CH1_varid) )
  call check( nf90_inq_varid(ncid, "Lon_CH1", Lon_CH1_varid) )
+ 
+    call check( nf90_inq_varid(ncid, "max1040", max1040_varid) )
+    call check( nf90_inq_varid(ncid, "max1110", max1110_varid) )
+    call check( nf90_inq_varid(ncid, "max1140", max1140_varid) )
+    call check( nf90_inq_varid(ncid, "max1240", max1240_varid) )
+    call check( nf90_inq_varid(ncid, "max1310", max1310_varid) )
+    call check( nf90_inq_varid(ncid, "max1340", max1340_varid) )
+    call check( nf90_inq_varid(ncid, "max1410", max1410_varid) )
+    call check( nf90_inq_varid(ncid, "max1440", max1440_varid) )
+    call check( nf90_inq_varid(ncid, "max1610", max1610_varid) )
+    call check( nf90_inq_varid(ncid, "max1640", max1640_varid) )
+    call check( nf90_inq_varid(ncid, "max1710", max1710_varid) )
+    call check( nf90_inq_varid(ncid, "max1740", max1740_varid) )
+    call check( nf90_inq_varid(ncid, "max1840", max1840_varid) )
+    call check( nf90_inq_varid(ncid, "max1910", max1910_varid) )
+    call check( nf90_inq_varid(ncid, "max1940", max1940_varid) )
+    call check( nf90_inq_varid(ncid, "max2010", max2010_varid) )
+    call check( nf90_inq_varid(ncid, "max2040", max2040_varid) )
+    call check( nf90_inq_varid(ncid, "max2140", max2140_varid) )
+    call check( nf90_inq_varid(ncid, "max2210", max2210_varid) )
+    call check( nf90_inq_varid(ncid, "max2240", max2240_varid) )
+    
+    call check( nf90_inq_varid(ncid, "min1040", min1040_varid) )
+    call check( nf90_inq_varid(ncid, "min1110", min1110_varid) )
+    call check( nf90_inq_varid(ncid, "min1140", min1140_varid) )
+    call check( nf90_inq_varid(ncid, "min1240", min1240_varid) )
+    call check( nf90_inq_varid(ncid, "min1310", min1310_varid) )
+    call check( nf90_inq_varid(ncid, "min1340", min1340_varid) )
+    call check( nf90_inq_varid(ncid, "min1410", min1410_varid) )
+    call check( nf90_inq_varid(ncid, "min1440", min1440_varid) )
+    call check( nf90_inq_varid(ncid, "min1610", min1610_varid) )
+    call check( nf90_inq_varid(ncid, "min1640", min1640_varid) )
+    call check( nf90_inq_varid(ncid, "min1710", min1710_varid) )
+    call check( nf90_inq_varid(ncid, "min1740", min1740_varid) )
+    call check( nf90_inq_varid(ncid, "min1840", min1840_varid) )
+    call check( nf90_inq_varid(ncid, "min1910", min1910_varid) )
+    call check( nf90_inq_varid(ncid, "min1940", min1940_varid) )
+    call check( nf90_inq_varid(ncid, "min2010", min2010_varid) )
+    call check( nf90_inq_varid(ncid, "min2040", min2040_varid) )
+    call check( nf90_inq_varid(ncid, "min2140", min2140_varid) )
+    call check( nf90_inq_varid(ncid, "min2210", min2210_varid) )
+    call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
+ 
+ 
+ 
+ 
+ 
+ 
  
  call check( nf90_inq_dimid(ncid, "x", x_dimid) )
  call check( nf90_inq_dimid(ncid, "y", y_dimid) )
