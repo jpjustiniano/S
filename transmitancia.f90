@@ -4,6 +4,7 @@
 ! Revisar:
 !	Revisar que pasa  con pixeles en borde donde no es procesado el pixel lateral
 !	Almacenaje de variables Global, Difusa y Directa. Kt, Kd en matris interna.
+!	Dejar la matriz de visibilidad procesado segun altura
 
 !Canal 1: [1728, 9020]
 !Canal 4: [432, 2255]
@@ -37,18 +38,15 @@
  real, dimension(:), allocatable :: x, y, xf, yf, hora
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out   	! Matrices de archivo original
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
- Integer, dimension(:,:), allocatable :: max1040,max1110,max1140,max1240,max1310,max1340,max1410,max1440,max1610
- Integer, dimension(:,:), allocatable :: min1040,min1110,min1140,min1240,min1310,min1340,min1410,min1440,min1610
- Integer, dimension(:,:), allocatable :: max1640, max1710,max1740,max1840,max1910,max1940,max2010,max2040,max2140
- Integer, dimension(:,:), allocatable :: min1640, min1710,min1740,min1840,min1910,min1940,min2010,min2040,min2140
- Integer, dimension(:,:), allocatable :: max2210, min2210, max2240, min2240
+ Integer, dimension(:,:), allocatable :: CH1_max, CH1_min
  integer, dimension(:,:), allocatable :: Lat_CH1 , Lon_CH1, Lat_CH4 , Lon_CH4
+ !integer, dimension(:,:), allocatable :: Altura , Temperatura, HR, Visibilidad, Albedo
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
- integer :: CH1_varid, Ch4_varid
+ integer :: CH1_varid, Ch4_varid, CH1_max_varid, CH1_min_varid
  integer :: Lat_CH4_varid, Lon_CH4_varid , Lat_CH1_varid, Lon_CH1_varid
- integer :: Lat_CH4_rad_varid, Lon_CH4_rad_varid , Lat_CH1_rad_varid, Lon_CH1_rad_varid
+ integer :: Lat_CH4_rad_varid, Lon_CH4_rad_varid , Lat_CH1_rad_varid, Lon_CH1_rad_varid 
  integer :: max1040_varid, max1110_varid, max1140_varid, max1240_varid, max1310_varid, max1340_varid
  integer :: max1410_varid, max1440_varid, max1610_varid, max1640_varid, max1710_varid, max1740_varid
  integer :: max1840_varid, max1910_varid, max1940_varid, max2010_varid, max2040_varid, max2140_varid
@@ -68,7 +66,7 @@
  integer :: ncid_rad
  integer :: x_dimid_rad, y_dimid_rad,hora_dimid_rad, xf_dimid_rad, yf_dimid_rad
  integer :: x_varid_rad, y_varid_rad, xf_varid_rad, yf_varid_rad, hora_varid_rad
- integer :: Global_varid, Difusa_varid, Directa_varid, XKT_varid, XKD_varid
+ integer :: Global_varid, Difusa_varid, Directa_varid
  integer(2) :: valid_max = 15000, valid_min=-3
  
  ! Variables OpenMPI
@@ -83,8 +81,8 @@
  real(8) :: TDIRn, TCLOUDn, TCLEARn, TDIRn2
  integer :: LATMOS, IWP, ISUB, NCL, INTVAL
  real(8) :: COWSR, TSRA, WSR, TSSA, TSRS, TSSS
- real(8) :: XI0, XIM, XXKT, XXKD, RSFCN, G, GLINHA, BETA, TAUW, DTAUW, DELTAW
- Integer, dimension(:,:), allocatable :: Global, Difusa, Directa, XKT, XKD
+ real(8) :: XI0, XIM, RSFCN, G, GLINHA, BETA, TAUW, DTAUW, DELTAW
+ Integer, dimension(:,:), allocatable :: Global, Difusa, Directa
  real(8) :: Glob, Dif, Dir
  
 !********************************************************** Fin declaracion Variables
@@ -98,8 +96,9 @@
 !**************************************************** Lectura de archivo de entrada
  TID = 1
  !$    TID = omp_get_num_procs();
+ !$		If (TID>6) TID = 6
  !$    call OMP_SET_NUM_THREADS(TID)
- print *, ' Numero de procesadores en uso: ',TID
+ !$ print *, ' Numero de procesadores en uso: ',TID
  call date_and_time(DATE=fecha, VALUES=tiempo)
  open (unit=16, file='log_trans.txt')
  
@@ -109,10 +108,6 @@
  call check( nf90_open(argument, nf90_nowrite, ncid) )
       
  ! Get the varids of the latitude and longitude coordinate variables.
- !call check( nf90_inq_varid(ncid, "x", x_varid) )
- !call check( nf90_inq_varid(ncid, "y", y_varid) )
- !call check( nf90_inq_varid(ncid, "xf", xf_varid) )
- !call check( nf90_inq_varid(ncid, "yf", yf_varid) )
  call check( nf90_inq_varid(ncid, "hora", hora_varid) )
 
  call check( nf90_inq_varid(ncid, "CH1", CH1_varid) )
@@ -122,53 +117,47 @@
  call check( nf90_inq_varid(ncid, "Lat_CH1", Lat_CH1_varid) )
  call check( nf90_inq_varid(ncid, "Lon_CH1", Lon_CH1_varid) )
  
-    call check( nf90_inq_varid(ncid, "max1040", max1040_varid) )
-    call check( nf90_inq_varid(ncid, "max1110", max1110_varid) )
-    call check( nf90_inq_varid(ncid, "max1140", max1140_varid) )
-    call check( nf90_inq_varid(ncid, "max1240", max1240_varid) )
-    call check( nf90_inq_varid(ncid, "max1310", max1310_varid) )
-    call check( nf90_inq_varid(ncid, "max1340", max1340_varid) )
-    call check( nf90_inq_varid(ncid, "max1410", max1410_varid) )
-    call check( nf90_inq_varid(ncid, "max1440", max1440_varid) )
-    call check( nf90_inq_varid(ncid, "max1610", max1610_varid) )
-    call check( nf90_inq_varid(ncid, "max1640", max1640_varid) )
-    call check( nf90_inq_varid(ncid, "max1710", max1710_varid) )
-    call check( nf90_inq_varid(ncid, "max1740", max1740_varid) )
-    call check( nf90_inq_varid(ncid, "max1840", max1840_varid) )
-    call check( nf90_inq_varid(ncid, "max1910", max1910_varid) )
-    call check( nf90_inq_varid(ncid, "max1940", max1940_varid) )
-    call check( nf90_inq_varid(ncid, "max2010", max2010_varid) )
-    call check( nf90_inq_varid(ncid, "max2040", max2040_varid) )
-    call check( nf90_inq_varid(ncid, "max2140", max2140_varid) )
-    call check( nf90_inq_varid(ncid, "max2210", max2210_varid) )
-    call check( nf90_inq_varid(ncid, "max2240", max2240_varid) )
-    
-    call check( nf90_inq_varid(ncid, "min1040", min1040_varid) )
-    call check( nf90_inq_varid(ncid, "min1110", min1110_varid) )
-    call check( nf90_inq_varid(ncid, "min1140", min1140_varid) )
-    call check( nf90_inq_varid(ncid, "min1240", min1240_varid) )
-    call check( nf90_inq_varid(ncid, "min1310", min1310_varid) )
-    call check( nf90_inq_varid(ncid, "min1340", min1340_varid) )
-    call check( nf90_inq_varid(ncid, "min1410", min1410_varid) )
-    call check( nf90_inq_varid(ncid, "min1440", min1440_varid) )
-    call check( nf90_inq_varid(ncid, "min1610", min1610_varid) )
-    call check( nf90_inq_varid(ncid, "min1640", min1640_varid) )
-    call check( nf90_inq_varid(ncid, "min1710", min1710_varid) )
-    call check( nf90_inq_varid(ncid, "min1740", min1740_varid) )
-    call check( nf90_inq_varid(ncid, "min1840", min1840_varid) )
-    call check( nf90_inq_varid(ncid, "min1910", min1910_varid) )
-    call check( nf90_inq_varid(ncid, "min1940", min1940_varid) )
-    call check( nf90_inq_varid(ncid, "min2010", min2010_varid) )
-    call check( nf90_inq_varid(ncid, "min2040", min2040_varid) )
-    call check( nf90_inq_varid(ncid, "min2140", min2140_varid) )
-    call check( nf90_inq_varid(ncid, "min2210", min2210_varid) )
-    call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
- 
- 
- 
- 
- 
- 
+call check( nf90_inq_varid(ncid, "max1040", max1040_varid) )
+call check( nf90_inq_varid(ncid, "max1110", max1110_varid) )
+call check( nf90_inq_varid(ncid, "max1140", max1140_varid) )
+call check( nf90_inq_varid(ncid, "max1240", max1240_varid) )
+call check( nf90_inq_varid(ncid, "max1310", max1310_varid) )
+call check( nf90_inq_varid(ncid, "max1340", max1340_varid) )
+call check( nf90_inq_varid(ncid, "max1410", max1410_varid) )
+call check( nf90_inq_varid(ncid, "max1440", max1440_varid) )
+call check( nf90_inq_varid(ncid, "max1610", max1610_varid) )
+call check( nf90_inq_varid(ncid, "max1640", max1640_varid) )
+call check( nf90_inq_varid(ncid, "max1710", max1710_varid) )
+call check( nf90_inq_varid(ncid, "max1740", max1740_varid) )
+call check( nf90_inq_varid(ncid, "max1840", max1840_varid) )
+call check( nf90_inq_varid(ncid, "max1910", max1910_varid) )
+call check( nf90_inq_varid(ncid, "max1940", max1940_varid) )
+call check( nf90_inq_varid(ncid, "max2010", max2010_varid) )
+call check( nf90_inq_varid(ncid, "max2040", max2040_varid) )
+call check( nf90_inq_varid(ncid, "max2140", max2140_varid) )
+call check( nf90_inq_varid(ncid, "max2210", max2210_varid) )
+call check( nf90_inq_varid(ncid, "max2240", max2240_varid) )
+
+call check( nf90_inq_varid(ncid, "min1040", min1040_varid) )
+call check( nf90_inq_varid(ncid, "min1110", min1110_varid) )
+call check( nf90_inq_varid(ncid, "min1140", min1140_varid) )
+call check( nf90_inq_varid(ncid, "min1240", min1240_varid) )
+call check( nf90_inq_varid(ncid, "min1310", min1310_varid) )
+call check( nf90_inq_varid(ncid, "min1340", min1340_varid) )
+call check( nf90_inq_varid(ncid, "min1410", min1410_varid) )
+call check( nf90_inq_varid(ncid, "min1440", min1440_varid) )
+call check( nf90_inq_varid(ncid, "min1610", min1610_varid) )
+call check( nf90_inq_varid(ncid, "min1640", min1640_varid) )
+call check( nf90_inq_varid(ncid, "min1710", min1710_varid) )
+call check( nf90_inq_varid(ncid, "min1740", min1740_varid) )
+call check( nf90_inq_varid(ncid, "min1840", min1840_varid) )
+call check( nf90_inq_varid(ncid, "min1910", min1910_varid) )
+call check( nf90_inq_varid(ncid, "min1940", min1940_varid) )
+call check( nf90_inq_varid(ncid, "min2010", min2010_varid) )
+call check( nf90_inq_varid(ncid, "min2040", min2040_varid) )
+call check( nf90_inq_varid(ncid, "min2140", min2140_varid) )
+call check( nf90_inq_varid(ncid, "min2210", min2210_varid) )
+call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
  
  call check( nf90_inq_dimid(ncid, "x", x_dimid) )
  call check( nf90_inq_dimid(ncid, "y", y_dimid) )
@@ -195,13 +184,7 @@
  
  allocate(CH1_in (NXf,NYf))       ! imagenes invertidas
  allocate(CH4_in (NX,NY))
- 
- allocate(CH1_max(NXf,NYf))
- allocate(CH1_min(NXf,NYf))
- 
- allocate(XKT(NXf,NYf))
- allocate(XKD(NXf,NYf))
- 
+
  allocate(Global(NXf,NYf))
  allocate(Difusa(NXf,NYf))
  allocate(Directa(NXf,NYf))
@@ -213,16 +196,10 @@
  allocate (Lon_CH1 (NXf, NYf) )
  allocate (Lat_CH4 (Nx, Ny) )
  allocate (Lon_CH4 (Nx, Ny) )
- 
+ allocate (CH1_max(NXf,NYf),CH1_min(NXf,NYf))
 
  ! Lectura de matrices 
- !call check( nf90_get_var(ncid, x_varid, x) )
- !call check( nf90_get_var(ncid, y_varid, y) )
- !call check( nf90_get_var(ncid, xf_varid, xf) )
- !call check( nf90_get_var(ncid, yf_varid, yf) )
  call check( nf90_get_var(ncid, hora_varid, hora) )
- call check( nf90_get_var(ncid, CH1_max_varid, CH1_max) )
- call check( nf90_get_var(ncid, CH1_min_varid, CH1_min) )
  call check( nf90_get_var(ncid, Lat_CH4_varid, Lat_CH4) )
  call check( nf90_get_var(ncid, Lon_CH4_varid, Lon_CH4) )
  call check( nf90_get_var(ncid, Lat_CH1_varid, Lat_CH1) )
@@ -338,8 +315,6 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  call check( nf90_enddef(ncid_rad) )
  !**************************************************** Procesamiento de las imagenes Sat.
  
- !call check( nf90_put_var(ncid_rad, x_varid_rad, xf) )
- !call check( nf90_put_var(ncid_rad, y_varid_rad, yf) )	
  call check( nf90_put_var(ncid_rad, Lat_CH4_rad_varid, Lat_CH4) )
  call check( nf90_put_var(ncid_rad, Lon_CH4_rad_varid, Lon_CH4) )
  call check( nf90_put_var(ncid_rad, Lat_CH1_rad_varid, Lat_CH1) )
@@ -360,15 +335,11 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  GLINHA = (G - G*G)/(1 - G*G)	! corrected G
  BETA = 0.5 - 3.*GLINHA/8. - 7.*GLINHA**3/128. - 9.*GLINHA**5/128. ! cloud backscatter coefficient
 
-
- !Lectura de datos climatologicos
+ !Lectura de datos altura
+ !call check( nf90_open('variables.nc', nf90_nowrite, ncid_var) )
+ !call check( nf90_inq_varid(ncid_var, "Alt", Alt_varid) )
+ !call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
  
-
-
-
-
-
-
  do rec = 1, Nhora
 	Directa = -1
 	Difusa = -1
@@ -379,12 +350,106 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 	call diajuliano (dia, mes, ano, diaj) 
 	
 	start(3) = rec
+
+	!Lectura de datos climatologicos
+	!call check( nf90_inq_varid(ncid_var, "Temp", Temp_varid) )
+	!call check( nf90_inq_varid(ncid_var, "HR", HR_varid) )
+	!call check( nf90_inq_varid(ncid_var, "Vis", Vis_varid) )
+	!call check( nf90_inq_varid(ncid_var, "Albedo", Albedo_varid) )
+	!
+	!call check( nf90_get_var (ncid_var, Temp_varid, Temp, start = start, &
+	!						   count = countf) )
+	!call check( nf90_get_var (ncid_var, HR_varid, HR, start = start, &
+	!						   count = countf) )
+	!call check( nf90_get_var (ncid_var, Vis_varid, vis, start = start, &
+	!						   count = countf) )
+	!call check( nf90_get_var (ncid_var, Albedo_varid, Albedo, start = start, &
+	!						   count = countf) )
+	
+	  Temp = 293. ! (K)
+	  Alt = 500. 	! (m)
+	  HR = .4 	! (0-1. ) 
+	  albedo = .20! (0-1.)
+	  vis = 10.	! (km)
+		
 	
 	call check( nf90_get_var(ncid, CH1_varid, CH1_in, start = start, &
-						   count = countf) )						   						   
+						   count = countf) )						   	!Cambia start para la siguiente istruccion?			
+						   		   
 	call check( nf90_get_var(ncid, CH4_varid, CH4_in, start, count) )
 	
+	Select Case (NInt(horad*10)) ! Selector de maximo y minimos
+	Case (:107)
+		CH1_min_varid = min1040_varid
+		CH1_max_varid = max1040_varid
+	Case (111:112)
+		CH1_min_varid = min1110_varid
+		CH1_max_varid = max1110_varid
+	Case (116:118)
+		CH1_min_varid = min1140_varid
+		CH1_max_varid = max1140_varid
+	Case (121:127)
+		CH1_min_varid = min1240_varid
+		CH1_max_varid = max1240_varid
+	Case (131:132)
+		CH1_min_varid = min1310_varid
+		CH1_max_varid = max1310_varid		
+	Case (136:137)
+		CH1_min_varid = min1340_varid
+		CH1_max_varid = max1340_varid
+	Case (141:142)
+		CH1_min_varid = min1410_varid
+		CH1_max_varid = max1410_varid
+	Case (146:148)
+		CH1_min_varid = min1440_varid
+		CH1_max_varid = max1440_varid	
+	Case (161:162)
+		CH1_min_varid = min1610_varid
+		CH1_max_varid = max1610_varid		
+	Case (166:168)
+		CH1_min_varid = min1640_varid
+		CH1_max_varid = max1640_varid	
+	Case (171:172)
+		CH1_min_varid = min1710_varid
+		CH1_max_varid = max1710_varid
+	Case (176:178)
+		CH1_min_varid = min1740_varid
+		CH1_max_varid = max1740_varid
+	Case (186:188)
+		CH1_min_varid = min1840_varid
+		CH1_max_varid = max1840_varid
+	Case (191:192)
+		CH1_min_varid = min1910_varid
+		CH1_max_varid = max1910_varid
+	Case (196:198)
+		CH1_min_varid = min1940_varid
+		CH1_max_varid = max1940_varid	
+	Case (201:202)
+		CH1_min_varid = min2010_varid
+		CH1_max_varid = max2010_varid
+	Case (206:208)
+		CH1_min_varid = min2040_varid
+		CH1_max_varid = max2040_varid		
+	Case (216:218)
+		CH1_min_varid = min2140_varid
+		CH1_max_varid = max2140_varid	
+	Case (221:222)
+		CH1_min_varid = min2210_varid
+		CH1_max_varid = max2210_varid
+	Case (226:)
+		CH1_min_varid = min2240_varid
+		CH1_max_varid = max2240_varid	
+	Case Default
+		print *, ' Fuera de rango de max y min: ', rec, horad
+		write (16,*) ' Fuera de rango de max y min: ',rec, horad 
+		stop 2
+	End Select	
+		
+	call check( nf90_get_var(ncid, CH1_min_varid, CH1_min) )
+	call check( nf90_get_var(ncid, CH1_max_varid, CH1_max) )
+	
 	print *,'rec: ',rec
+		
 	
 
 	Do j = 1, NYf
@@ -394,7 +459,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		CALL ASTRO(diaj,E0,DEC,ET) 
 		
 		DECR = DEC*cdr
-		YLATR= Lat_CH1(NXf/2,j)/100.*cdr
+		YLATR= Lat_CH1(NXf/2,j)/100.*cdr 		! Optimizacion, Uso de latitud media.
 		CODEC = cos(DECR)
 		COLAT = cos(YLATR)
 		SIDEC = sin(DECR)
@@ -435,26 +500,22 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		
 !$omp parallel private(XIM,vis,Alt,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,Dir,Dif,Glob,TCLEARn,TDIRn,TCLOUDn)
 !$omp do
-		Do i=1, NXf
-			! Lectura de archivo con valores de temperatura, HR, vis., albedo y altura, lat y long.
-			! En funcion del archivo de altura se procesa o no el pixel.
+		Do i=1, NXf 	!Sacar de variables privadas a la Alt, Vis, Albedo, Altura. 
+		! En funcion del archivo de altura se procesa o no el pixel.
 			 
-		  Temp = 293. ! (K)
-		  Alt = 500. 	! (m)
-		  HR = .4 	! (0-1. ) 
-		  albedo = .20! (0-1.)
-		  vis = 10.	! (km)
-			
 		  !change relative humidity and albedo from percentual to relative values
 		  !albedo = albedo/1000.0
 		  !HR     = HR /100.0
 			
 		  IF ( Alt > 0. ) THEN 
 			! Calculo de Cobertura de nubes.
-			XIM =  (CH1_in(i,j)-CH1_min(i,j))/((CH1_max(i,j)-CH1_min(i,j) ) *1.)
+			if ( CH1_max(i,j) > 4000 ) Then 
+				XIM =  (CH1_in(i,j)-CH1_min(i,j))/((CH1_max(i,j)-CH1_min(i,j) ) *1.)
 			!print *, CH1_in(i,j),CH1_max(i,j), CH1_min(i,j), XIM
-			
-			!if ( CH1_max(i,j) < 3000 ) XIM = 0.05
+			Else
+				!XIM = (CH1_in(i,j)-CH1_min(i,j))/((7000. - CH1_min(i,j))*1.)
+				 XIM = 0.
+			End if
 			
 			! calculation of the visibility at the station as function of visibility and altitude
 			 vis   = vis * EXP( (LOG(100.0/vis)/1000.0)*Alt )
@@ -498,7 +559,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			! Calculo de irradiancia global, difusa y directa a partir de transmitancias calculadas.
 			
 			!calculate Global radiation 
-			Glob  = XI0 *((1.0 - XIM) * (TCLEARn - TCLOUDn) + TCLOUDn)
+			Glob  = XI0 *((1.0 - XIM) * (TCLEARn - TCLOUDn) + TCLOUDn) !Revisar XIM de difusa
 			if (Glob < 0.0)  Glob = 0.
 			
 			XIM = 1.0 - XIM		!!
@@ -517,7 +578,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 				DTAUW = -2.0
 				Dir=-2.0
 				Dif=-2.0
-				print *, 'Error en (i,j):',i,j, CH1_max(i,j), CH1_min(i,j)
+				print *, 'Error en (i,j):',i,j, CH1_in(i,j), CH1_max(i,j), CH1_min(i,j), XIM
 			end if
 			
 			

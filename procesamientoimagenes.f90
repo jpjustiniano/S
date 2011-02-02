@@ -91,17 +91,17 @@
  min1940=10000;min2010=10000;min2040=10000;min2140=10000;min2210=10000;min2240=10000
 !********************************************************** Fin declaracion Variables
  TID = 1
-  !$	print *,'pase!'
- !$    TID = omp_get_num_procs()
- !$    call OMP_SET_NUM_THREADS(TID)
- !$		If (TID>4) TID = 4
- !$	print *,'pase!'
+!$	print *,'pase!'
+!$    TID = omp_get_num_procs()
+!$		If (TID>6) TID = 6
+!$    call OMP_SET_NUM_THREADS(TID)
+!$	print *,'pase!'
  
  print *
  print *, '                        Recorte de imagenes NetCDF v 0.1'
  print *, '                        *********************************'
  print *
- print *, ' Numero de procesadores en uso: ',TID
+!$ print *, ' Numero de procesadores en uso: ',TID
  
  
  call date_and_time(DATE=fecha, VALUES=tiempo)
@@ -332,10 +332,6 @@ End do
     call check( nf90_def_dim(ncid, "hora", NF90_UNLIMITED, hora_dimid) )
     
     ! Variables Coordinadas
-    !call check( nf90_def_var(ncid,"x", NF90_FLOAT, x_dimid, x_varid) )	! Define the coordinate variables
-    !call check( nf90_def_var(ncid,"y", NF90_FLOAT, y_dimid, y_varid) )	! 32 bit
-    !call check( nf90_def_var(ncid,"xf", NF90_FLOAT, xf_dimid, xf_varid) )	
-    !call check( nf90_def_var(ncid,"yf", NF90_FLOAT, yf_dimid, yf_varid) )
     call check( nf90_def_var(ncid,"hora", NF90_FLOAT, hora_dimid, hora_varid) ) ! 32 bit   
 
     dimids =  (/ x_dimid, y_dimid, hora_dimid  /) ! The dimids array is used to pass the IDs of the dimensions
@@ -503,24 +499,6 @@ End do
     ! End define mode.
     call check( nf90_enddef(ncid) )
     !*********************************************************************** Fin Definiciones NetCDF	
-   
-!   x(1) = -66.
-!   y(1) = -17. 
-!   xf(1) = -66.
-!   yf(1) = -17. 
-
-!    do i = 2, NX 	! Guardar coordenadas de lat y lon.
-!        x(i) =  x(i-1) - 0.02
-!    end do
-!    do j = 2, NY
-!        y(j) = y(j-1) - 0.0624
-!    end do	
-!    do i = 2, NXf
-!        xf(i) = xf(i-1) - 0.005
-!    end do
-!    do j = 2, NYf
-!        yf(j) = yf(j-1) - 0.0156
-!    end do	
 
     ! Write the coordinate variable data. This will put the latitudes
     ! and longitudes of our data grid into the netCDF file.

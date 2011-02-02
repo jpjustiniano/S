@@ -13,14 +13,14 @@
    integer, parameter :: r4i = 1095, r4f = 1368 , r1i = r4i*4, r1f = r4f*4 !
    integer, parameter :: NLat= 432, Nlon= 2255
    integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny-1)*4+1
-   real, dimension (NXf,NYf) :: Altura , Temperatura, HR, Visibilidad
+   real, dimension (NXf,NYf) :: Altura , Temperatura, HR, Visibilidad, Albedo
    integer, dimension ((r4f- r4i)*4+1, (Ny-1)*4+1) :: Lat_CH1 , Lon_CH1
    integer, dimension (Nx, Ny)  :: Lat_CH4 , Lon_CH4
    integer, dimension (Nlon,NLat) :: Latitud , Longitud
   
    integer :: x_dimid, y_dimid, mes_dimid
    integer :: x_varid, y_varid, mes_varid       
-   integer :: Alt_varid, Temp_varid, HR_varid, Vis_varid
+   integer :: Alt_varid, Temp_varid, HR_varid, Vis_varid, Albedo_varid
    integer :: dimids(NDIMS), dimids3d(3), rec(3)
    
    integer :: i=1,j=1, lat, lon, k, count(3), start(3)
@@ -45,6 +45,7 @@
    call check( nf90_def_var(ncid, "Temp", NF90_float, dimids, Temp_varid) )
    call check( nf90_def_var(ncid, "HR", NF90_float, dimids, HR_varid) )
    call check( nf90_def_var(ncid, "Vis", NF90_float, dimids, Vis_varid) )
+   call check( nf90_def_var(ncid, "Albedo", NF90_float, dimids, Albedo_varid) )
    
    call check( nf90_put_att(ncid, Alt_varid, "units", "meters") )
    call check( nf90_put_att(ncid, Alt_varid, "long_name", "Altitud") ) 
@@ -57,6 +58,9 @@
    
    call check( nf90_put_att(ncid, Vis_varid, "units", "meters") )  
    call check( nf90_put_att(ncid, Vis_varid, "long_name", "Visibilidad") ) 
+   
+   call check( nf90_put_att(ncid, Albedo_varid, "units", "%") )  
+   call check( nf90_put_att(ncid, Albedo_varid, "long_name", "Albedo") ) 
 	
    call check( nf90_enddef(ncid) )  ! End define metadata mode. 
    !*********************************************************************** Fin Definiciones
