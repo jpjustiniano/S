@@ -23,7 +23,7 @@
  
  integer :: i, j, rec
  real ano, mes, diaj, dia 
- Real(8) :: Alt, HR, Albedo, temp, vis
+ Real(8) :: HR, Albedo, temp, vis
  Real horad
  character (30) :: argument  ! Nombre de archivo 
  character(8)  :: fecha
@@ -32,7 +32,7 @@
  Logical :: Flag1 = .true.
  
  ! Variables NETCDF archivo entrada
- integer :: ncid, ncid_in, status
+ integer :: ncid, ncid_in, ncid_var, status
  integer, parameter :: NDIMS = 3, NDIMS_IN	= 2     
  integer :: NX, NY, NXf, NYf, Nhora
  real, dimension(:), allocatable :: x, y, xf, yf, hora
@@ -40,13 +40,14 @@
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
  Integer, dimension(:,:), allocatable :: CH1_max, CH1_min
  integer, dimension(:,:), allocatable :: Lat_CH1 , Lon_CH1, Lat_CH4 , Lon_CH4
- !integer, dimension(:,:), allocatable :: Altura , Temperatura, HR, Visibilidad, Albedo
+ integer, dimension(:,:), allocatable :: Alt !, Temp, HR, Vis, Albedo
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
  integer :: CH1_varid, Ch4_varid, CH1_max_varid, CH1_min_varid
  integer :: Lat_CH4_varid, Lon_CH4_varid , Lat_CH1_varid, Lon_CH1_varid
  integer :: Lat_CH4_rad_varid, Lon_CH4_rad_varid , Lat_CH1_rad_varid, Lon_CH1_rad_varid 
+ integer :: Alt_varid, Temp_varid, Albedo_varid, Vis_varid, HR_varid
  integer :: max1040_varid, max1110_varid, max1140_varid, max1240_varid, max1310_varid, max1340_varid
  integer :: max1410_varid, max1440_varid, max1610_varid, max1640_varid, max1710_varid, max1740_varid
  integer :: max1840_varid, max1910_varid, max1940_varid, max2010_varid, max2040_varid, max2140_varid
@@ -197,6 +198,7 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
  allocate (Lat_CH4 (Nx, Ny) )
  allocate (Lon_CH4 (Nx, Ny) )
  allocate (CH1_max(NXf,NYf),CH1_min(NXf,NYf))
+ allocate (Alt(NXf,NYf))
 
  ! Lectura de matrices 
  call check( nf90_get_var(ncid, hora_varid, hora) )
@@ -233,8 +235,6 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
  call check( nf90_def_dim(ncid_rad, "hora", Nhora, hora_dimid_rad) )
  
  ! Variables
- !call check( nf90_def_var(ncid_rad,"x", NF90_FLOAT, x_dimid_rad, x_varid_rad) )	! Define the coordinate variables
- !call check( nf90_def_var(ncid_rad,"y", NF90_FLOAT, y_dimid_rad, y_varid_rad) )	! 32 bit
  call check( nf90_def_var(ncid_rad,"hora", NF90_FLOAT, hora_dimid_rad, hora_varid_rad) ) ! 32 bit
      
 
@@ -336,9 +336,9 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  BETA = 0.5 - 3.*GLINHA/8. - 7.*GLINHA**3/128. - 9.*GLINHA**5/128. ! cloud backscatter coefficient
 
  !Lectura de datos altura
- !call check( nf90_open('variables.nc', nf90_nowrite, ncid_var) )
- !call check( nf90_inq_varid(ncid_var, "Alt", Alt_varid) )
- !call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
+ call check( nf90_open('variables.nc', nf90_nowrite, ncid_var) )
+ call check( nf90_inq_varid(ncid_var, "Alt", Alt_varid) )
+ call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
  
  do rec = 1, Nhora
 	Directa = -1
@@ -367,7 +367,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 	!						   count = countf) )
 	
 	  Temp = 293. ! (K)
-	  Alt = 500. 	! (m)
+	  
 	  HR = .4 	! (0-1. ) 
 	  albedo = .20! (0-1.)
 	  vis = 10.	! (km)
@@ -498,18 +498,18 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		THETA  = ACOS(COSZEN)/CDR
 		XI0   = 1367.00*E0*COSZEN
 		
-!$omp parallel private(XIM,vis,Alt,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,Dir,Dif,Glob,TCLEARn,TDIRn,TCLOUDn)
+!$omp parallel private(XIM,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,Dir,Dif,Glob,TCLEARn,TDIRn,TCLOUDn)
 !$omp do
-		Do i=1, NXf 	!Sacar de variables privadas a la Alt, Vis, Albedo, Altura. 
+		Do i=1, NXf 	
 		! En funcion del archivo de altura se procesa o no el pixel.
 			 
 		  !change relative humidity and albedo from percentual to relative values
 		  !albedo = albedo/1000.0
 		  !HR     = HR /100.0
 			
-		  IF ( Alt > 0. ) THEN 
+		  IF ( Alt(i,j) > 0. ) THEN 
 			! Calculo de Cobertura de nubes.
-			if ( CH1_max(i,j) > 4000 ) Then 
+			if ( CH1_max(i,j) > 2500 ) Then 
 				XIM =  (CH1_in(i,j)-CH1_min(i,j))/((CH1_max(i,j)-CH1_min(i,j) ) *1.)
 			!print *, CH1_in(i,j),CH1_max(i,j), CH1_min(i,j), XIM
 			Else
@@ -518,7 +518,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			End if
 			
 			! calculation of the visibility at the station as function of visibility and altitude
-			 vis   = vis * EXP( (LOG(100.0/vis)/1000.0)*Alt )
+			 vis   = vis * EXP( (LOG(100.0/vis)/1000.0)*(Alt(i,j)/10.) )
 			! test for visibility between 2 and 150 km
 			 IF (VIS > 150.)  VIS = 150.
 			 IF (VIS <   2.)  VIS =   2.
@@ -548,10 +548,10 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			
 			If((mod(i,5)==0) .or. flag1) then 
 				CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,0,IWP,ISUB,&	
-				&     0.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLEARn,TDIRn)
+				&     0.0D0,TOP,NCL,INTVAL,Temp,HR,Alt(i,j)/10.,CLOLWC,CDR,TCLEARn,TDIRn)
 
 				CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,1,IWP,ISUB,&	
-				&    100.0D0,TOP,NCL,INTVAL,Temp,HR,Alt,CLOLWC,CDR,TCLOUDn,TDIRn2)
+				&    100.0D0,TOP,NCL,INTVAL,Temp,HR,Alt(i,j)/10.,CLOLWC,CDR,TCLOUDn,TDIRn2)
 				
 				flag1= .false.
 			end if 

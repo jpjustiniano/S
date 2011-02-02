@@ -44,7 +44,7 @@
  integer,dimension(8) :: tiempo, tiempof
  integer, parameter :: r4i = 1095, r4f = 1368 , r1i = r4i*4, r1f = r4f*4 ! CH1: 4380 a 5472
  integer, parameter :: NLat= 432, Nlon= 2255
- integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny)*4
+ integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny)*4-3
  integer, dimension (Nlon,NLat) :: Latitud , Longitud
  Integer :: L1, L2, TID
  Real :: mm
@@ -532,8 +532,8 @@ End do
  call check( nf90_get_var(ncid_in, CH1_in_varid, CH1_out))  
  
  ! Recorte de imagenes
- CH4_in = CH4_out(r4i:r4f,:430)!925:1450
- CH1_in = CH1_out(r1i:r1f,:1720)!3700:5800
+ CH4_in = CH4_out(r4i:r4f,:NY)!925:1450
+ CH1_in = CH1_out(r1i:r1f,:NYf)!3700:5800
  
  ! Revision de matriz
 !$omp parallel 

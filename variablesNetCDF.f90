@@ -13,10 +13,11 @@
    integer, parameter :: r4i = 1095, r4f = 1368 , r1i = r4i*4, r1f = r4f*4 !
    integer, parameter :: NLat= 432, Nlon= 2255
    integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny-1)*4+1
-   real, dimension (NXf,NYf) :: Altura , Temperatura, HR, Visibilidad, Albedo
-   integer, dimension ((r4f- r4i)*4+1, (Ny-1)*4+1) :: Lat_CH1 , Lon_CH1
+   integer, dimension (NXf,NYf) :: Altura , Temperatura, HR, Visibilidad, Albedo
+   integer, dimension (NXf,NYf) :: Lat_CH1 , Lon_CH1
    integer, dimension (Nx, Ny)  :: Lat_CH4 , Lon_CH4
    integer, dimension (Nlon,NLat) :: Latitud , Longitud
+    integer :: Lat_CH4_varid, Lon_CH4_varid , Lat_CH1_varid, Lon_CH1_varid
   
    integer :: x_dimid, y_dimid, mes_dimid
    integer :: x_varid, y_varid, mes_varid       
@@ -25,8 +26,8 @@
    
    integer :: i=1,j=1, lat, lon, k, count(3), start(3)
    Integer :: L1, L2
-   Integer :: ierror
-   Real :: mm, al
+   Integer :: ierror, al
+   real :: mm
    Character(1) :: c1i
    Character(2) :: ci
    Character(60) ::filename
@@ -41,26 +42,67 @@
    dimids =  (/ x_dimid, y_dimid/)
    dimids3d = (/ x_dimid, y_dimid, mes_dimid  /)
    
-   call check( nf90_def_var(ncid, "Alt", NF90_float, dimids, Alt_varid) )  ! Define the variable and type. NF90_INT (4-byte integer)
+   call check( nf90_def_var(ncid, "Alt", NF90_Short, dimids, Alt_varid) )  ! Define the variable and type. NF90_INT (4-byte integer)
    call check( nf90_def_var(ncid, "Temp", NF90_float, dimids, Temp_varid) )
    call check( nf90_def_var(ncid, "HR", NF90_float, dimids, HR_varid) )
    call check( nf90_def_var(ncid, "Vis", NF90_float, dimids, Vis_varid) )
    call check( nf90_def_var(ncid, "Albedo", NF90_float, dimids, Albedo_varid) )
+     call check( nf90_def_var(ncid, "Lat_CH4", NF90_SHORT, dimids, Lat_CH4_varid) )
+    call check( nf90_def_var(ncid, "Lon_CH4", NF90_SHORT, dimids, Lon_CH4_varid) )
+    call check( nf90_def_var(ncid, "Lat_CH1", NF90_SHORT, dimids, Lat_CH1_varid) )
+    call check( nf90_def_var(ncid, "Lon_CH1", NF90_SHORT, dimids, Lon_CH1_varid) )
    
    call check( nf90_put_att(ncid, Alt_varid, "units", "meters") )
-   call check( nf90_put_att(ncid, Alt_varid, "long_name", "Altitud") ) 
+   call check( nf90_put_att(ncid, Alt_varid, "long_name", "Altitud") )
+   call check( nf90_put_att(ncid, Alt_varid, "scale_factor", 0.1) ) 
+   call check( nf90_put_att(ncid, Alt_varid, "_CoordinateAxes", "Lat_CH1 Lon_CH1") )
    
    call check( nf90_put_att(ncid, Temp_varid, "units", "C Deg") ) 
    call check( nf90_put_att(ncid, Temp_varid, "long_name", "Temperatura") ) 
+   call check( nf90_put_att(ncid, Temp_varid, "_CoordinateAxes", "Lat_CH1 Lon_CH1") )
    
    call check( nf90_put_att(ncid, HR_varid, "units", "percent") )  
-   call check( nf90_put_att(ncid, HR_varid, "long_name", "Humedad Relativa") )  
+   call check( nf90_put_att(ncid, HR_varid, "long_name", "Humedad Relativa") )
+   call check( nf90_put_att(ncid, HR_varid, "_CoordinateAxes", "Lat_CH1 Lon_CH1") )  
    
    call check( nf90_put_att(ncid, Vis_varid, "units", "meters") )  
    call check( nf90_put_att(ncid, Vis_varid, "long_name", "Visibilidad") ) 
+   call check( nf90_put_att(ncid, Vis_varid, "_CoordinateAxes", "Lat_CH1 Lon_CH1") )
    
    call check( nf90_put_att(ncid, Albedo_varid, "units", "%") )  
    call check( nf90_put_att(ncid, Albedo_varid, "long_name", "Albedo") ) 
+   call check( nf90_put_att(ncid, Albedo_varid, "_CoordinateAxes", "Lat_CH1 Lon_CH1") )
+   
+    ! Atributos de Geolocalizacion
+    call check( nf90_put_att(ncid, Lat_CH4_varid, "units", "degrees_north"))
+    call check( nf90_put_att(ncid, Lat_CH4_varid, "missing_value", -300) )
+    call check( nf90_put_att(ncid, Lat_CH4_varid, "valid_min", -32768) )
+    call check( nf90_put_att(ncid, Lat_CH4_varid, "valid_max", 32768) )
+    call check( nf90_put_att(ncid, Lat_CH4_varid, "scale_factor", 0.01) )
+    call check( nf90_put_att(ncid, Lat_CH4_varid, "_CoordinateAxisType", "Lat_CH4") )
+    call check( nf90_put_att(ncid, Lat_CH4_varid, "standard_name", "Latitud_CH4") )
+    
+    call check( nf90_put_att(ncid, Lon_CH4_varid, "units", "degrees_east") )
+    call check( nf90_put_att(ncid, Lon_CH4_varid, "missing_value", -300) )
+    call check( nf90_put_att(ncid, Lon_CH4_varid, "valid_min", -32768) )
+    call check( nf90_put_att(ncid, Lon_CH4_varid, "valid_max", 32768) )
+    call check( nf90_put_att(ncid, Lon_CH4_varid, "scale_factor", 0.01) )
+    call check( nf90_put_att(ncid, Lon_CH4_varid, "_CoordinateAxisType", "Lon_CH4") )
+    call check( nf90_put_att(ncid, Lon_CH4_varid, "standard_name", "Longitud_CH4") )
+        
+    call check( nf90_put_att(ncid, Lat_CH1_varid, "units", "degrees_north"))
+    call check( nf90_put_att(ncid, Lat_CH1_varid, "missing_value", -300) )
+    call check( nf90_put_att(ncid, Lat_CH1_varid, "valid_min", -32768) )
+    call check( nf90_put_att(ncid, Lat_CH1_varid, "valid_max", 32768) )
+    call check( nf90_put_att(ncid, Lat_CH1_varid, "scale_factor", 0.01) )
+    call check( nf90_put_att(ncid, Lat_CH1_varid, "_CoordinateAxisType", "Lat_CH1") )
+    
+    call check( nf90_put_att(ncid, Lon_CH1_varid, "units", "degrees_east") )
+    call check( nf90_put_att(ncid, Lon_CH1_varid, "missing_value", -300) )
+    call check( nf90_put_att(ncid, Lon_CH1_varid, "valid_min", -32768) )
+    call check( nf90_put_att(ncid, Lon_CH1_varid, "valid_max", 32768) )
+    call check( nf90_put_att(ncid, Lon_CH1_varid, "scale_factor", 0.01) )
+    call check( nf90_put_att(ncid, Lon_CH1_varid, "_CoordinateAxisType", "Lon_CH1") )
 	
    call check( nf90_enddef(ncid) )  ! End define metadata mode. 
    !*********************************************************************** Fin Definiciones
@@ -134,24 +176,28 @@ Do i =1, (r4f- r4i)*4+1
 		End do		
 	End do
 End do
+
+    call check( nf90_put_var(ncid, Lat_CH4_varid, Lat_CH4) )
+    call check( nf90_put_var(ncid, Lon_CH4_varid, Lon_CH4) )
+    call check( nf90_put_var(ncid, Lat_CH1_varid, Lat_CH1) )
+    call check( nf90_put_var(ncid, Lon_CH1_varid, Lon_CH1) )
  
 ! Fin de Geolocalizacion 
        !************* /Latitud y longitud
        
        !************* Altitud
-       Open(10,FILE='./Altura/Altura.media_hora.corregido2.txt', IOSTAT=ierror)
-        Do i=1, NXf
-			Do j = 1, NYf
-				read(10,*, IOSTAT=ierror) al
-				Altura(i,j) = Nint(al*100)
-			End do
-		End do
+		Open(10,FILE='./Altura/Altura.media_hora.txt', IOSTAT=ierror)
+		If (ierror /= 0) Then 
+			print *, '   Erorr en leer archivo : ./Altura/Altura.media_hora.txt'
+			goto 999
+		End if
+				read(10,*, IOSTAT=ierror) ((Altura(i,j), j = 1, NYf), i=1, NXf)
 		close (10)
 
        call check( nf90_put_var(ncid, Alt_varid, Altura) )
        !************* /Altitud
        
-!       !************* Temperatura
+!!       !************* Temperatura
 !	Do k = 1, 12
 !	   start(3) = k 
 	      
@@ -164,49 +210,98 @@ End do
 !	   end if 
        
 !       Open(10,FILE=filename, IOSTAT=ierror)
-!       If (ierror/=0) print *,'No se puede abrir:',filename,k
-!!       Do  i=1, NXf
-!!          Do j = 1, NYf
-!!			read(10,*, IOSTAT=ierror) al 
-!!			If (ierror/=0) print *,'No se puede leer (i,j): ',i, j,k ,filename
-!!            Temperatura(i,j) = Nint(al*100)
-!!          end do
-!!       end do
-!		 read(10,*) Temperatura(i,j)
-!       close (10)
-!       call check( nf90_put_var(ncid, temp_varid, Temperatura, start, count) )
+!		If (ierror/=0) Then
+!			print *,'No se puede abrir:',filename,k
+!			goto 999
+!		End if
+		
+!		read(10,*, IOSTAT=ierror) ((Temperatura(i,j), j = 1, NYf), i=1, NXf)
+!		close (10)
+
+!		call check( nf90_put_var(ncid, Temp_varid, Temperatura, start, count) )	
 !	End do
-!       !************* /Temperatura
+!!       !************* /Temperatura
        
-!       !************* Visibilidad
-!       Open(10,FILE='Visibilidad.media_hora.txt', IOSTAT=ierror)
-!       Do  i=1, NXf
-!          Do j = 1, NYf
-!			read(10,*, IOSTAT=ierror) al
-!             Visibilidad (i,j) = al
-!          end do
-!       end do
+!!       !************* Visibilidad
+!	Do k = 1, 12
+!	   start(3) = k 
+	      
+!	   If ( k<10) then
+!	    write (c1i,'(I1)') k 
+!	    filename= './Visibilidad/Visibilidad.'//c1i//'.media_hora.txt'
+!	   else
+!	   	write (c1i,'(I2)') k 
+!	    filename= './Visibilidad/Visibilidad.'//ci//'.media_hora.txt'
+!	   end if 
        
-!       close (10)
-!       call check( nf90_put_var(ncid, Vis_varid, Visibilidad) )
-!       !************* /Visibilidad       
+!       Open(10,FILE=filename, IOSTAT=ierror)
+!		If (ierror/=0) Then
+!			print *,'No se puede abrir:',filename,k
+!			goto 999
+!		End if
+		
+!		read(10,*, IOSTAT=ierror) ((Visibilidad(i,j), j = 1, NYf), i=1, NXf)
+!		close (10)
+
+!		call check( nf90_put_var(ncid, Vis_varid, Visibilidad, start, count) )	
+!	End do
+!!       !************* /Visibilidad       
        
-!       !************* HR
-!       Open(10,FILE='HR.media_hora.txt', IOSTAT=ierror)
-!       Do  i=1, NXf
-!          Do j = 1, NYf
-!			read(10,*, IOSTAT=ierror) al
-!             HR (i,j) = al
-!          end do
-!       end do
+!!       !************* HR
+!	Do k = 1, 12
+!	   start(3) = k 
+	      
+!	   If ( k<10) then
+!	    write (c1i,'(I1)') k 
+!	    filename= './HR/HR.'//c1i//'.media_hora.txt'
+!	   else
+!	   	write (c1i,'(I2)') k 
+!	    filename= './HR/HR.'//ci//'.media_hora.txt'
+!	   end if 
        
-!       close (10)
-!       call check( nf90_put_var(ncid, Vis_varid, HR) )
-!       !************* /HR  
+!       Open(10,FILE=filename, IOSTAT=ierror)
+!		If (ierror/=0) Then
+!			print *,'No se puede abrir:',filename,k
+!			goto 999
+!		End if
+		
+!		read(10,*, IOSTAT=ierror) ((HR(i,j), j = 1, NYf), i=1, NXf)
+!		close (10)
+
+!		call check( nf90_put_var(ncid, HR_varid, HR, start, count) )	
+!	End do
+!!       !************* /HR  
+
+!!       !************* Albedo
+!	Do k = 1, 12
+!	   start(3) = k 
+	      
+!	   If ( k<10) then
+!	    write (c1i,'(I1)') k 
+!	    filename= './Albedo/Albedo.'//c1i//'.media_hora.txt'
+!	   else
+!	   	write (c1i,'(I2)') k 
+!	    filename= './Albedo/Albedo.'//ci//'.media_hora.txt'
+!	   end if 
+       
+!       Open(10,FILE=filename, IOSTAT=ierror)
+!		If (ierror/=0) Then
+!			print *,'No se puede abrir:',filename,k
+!			goto 999
+!		End if
+		
+!		read(10,*, IOSTAT=ierror) ((Albedo(i,j), j = 1, NYf), i=1, NXf)
+!		close (10)
+
+!		call check( nf90_put_var(ncid, Albedo_varid, Albedo, start, count) )	
+!	End do
+!!       !************* /HR  
 		
        call check( nf90_close(ncid) ) ! Close the file.
      
-       print *, '  SUCCESS writing ', FILE_NAME, '!'
+       print *, '             SUCCESS writing  ', FILE_NAME, ' !!'
+      
+      999 Stop  
      
      contains
        subroutine check(status)
@@ -217,4 +312,5 @@ End do
            stop 2
          end if
        end subroutine check
+      
      end program variables
