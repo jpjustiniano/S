@@ -1,4 +1,4 @@
-! Copyright (C) 2010, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
+! Copyright (C) 2011, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
 ! Programa para el calculo de la radiacion Global, Difusa y Directa.
 
 ! Revisar:

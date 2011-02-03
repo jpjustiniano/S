@@ -1,4 +1,4 @@
-! Copyright (C) 2010, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
+! Copyright (C) 2011, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
 ! Programa para el filtraje y almacenamiento de imagenes satelitales en un archivo mensual.
 ! Funciona con horas en UTC.
 
