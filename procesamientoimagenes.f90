@@ -91,15 +91,14 @@
  min1940=10000;min2010=10000;min2040=10000;min2140=10000;min2210=10000;min2240=10000
 !********************************************************** Fin declaracion Variables
  TID = 1
-!$	print *,'pase!'
 !$    TID = omp_get_num_procs()
 !$		If (TID>6) TID = 6
 !$    call OMP_SET_NUM_THREADS(TID)
-!$	print *,'pase!'
+
  
  print *
- print *, '                        Recorte de imagenes NetCDF v 0.1'
- print *, '                        *********************************'
+ print *, '                          Recorte de imagenes NetCDF'
+ print *, '                          **************************'
  print *
 !$ print *, ' Numero de procesadores en uso: ',TID
  
@@ -292,7 +291,7 @@ End do
  End If
  
  call diajuliano (idia, imes, iano, diaj)   ! entrada de reales en ves de enteros.
- call sunae(iano,diaj,ihora, latit, longit,az,el,ha,dec,soldst)  ! Comp.
+ call sunae(iano,diaj,ihora, latit, longit,az,el,ha,dec,soldst)  
 
  if (el < 7.0) then
     write (*,*) '   ',cdia,'  ', hora,':', minu, " eliminada, nocturna. ", el
@@ -795,7 +794,7 @@ real, INTENT(IN) :: year         !Year (yyyy)
 real, INTENT(out) :: dayj 		!Day of year
 INTEGER :: i            			!Index,variable
 INTEGER :: leap_day     			!Extra day for leap year
-
+ 
 ! Check for leap year, and add extra day if necessary
 IF ( MOD(year,400.) == 0 ) THEN
     leap_day = 1    ! Years divisible by 400 are leap years
@@ -839,7 +838,7 @@ END SUBROUTINE diajuliano
 
 implicit real (a-z)
 data twopi,pi,rad/6.2831853,3.1415927,.017453293/
-   
+  
 !   get the current julian date (actually add 2,400,000 for jd)
       delta=year-1949.
       leap=aint(delta/4.)
@@ -903,20 +902,20 @@ data twopi,pi,rad/6.2831853,3.1415927,.017453293/
       if(ha.lt.-pi) ha=ha+twopi
       if(ha.gt.pi) ha=ha-twopi
 !   change latitude to radians
-      lat=lat*rad
+      latrad=lat*rad
 
 !   calculate azimuth and elevation
-      el=asin(sin(dec)*sin(lat)+cos(dec)*cos(lat)*cos(ha))
+      el=asin(sin(dec)*sin(latrad)+cos(dec)*cos(latrad)*cos(ha))
 !      az=asin(-cos(dec)*sin(ha)/cos(el))
 
 !!   this puts azimuth between 0 and 2*pi radians
-!      if(sin(dec)-sin(el)*sin(lat).ge.0.) then
+!      if(sin(dec)-sin(el)*sin(latrad).ge.0.) then
 !		if(sin(az).lt.0.) az=az+twopi
 !      else
 !      az=pi-az
 !      endif
-!   if az=90 degs, elcritical=asin(sin(dec)/sin(lat))
-!    elc=asin(sin(dec)/sin(lat))
+!   if az=90 degs, elcritical=asin(sin(dec)/sin(latrad))
+!    elc=asin(sin(dec)/sin(latrad))
 !    if(el.ge.elc)az=pi-az
 !    if(el.le.elc.and.ha.gt.0.)az=twopi+az
 
