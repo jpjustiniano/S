@@ -114,8 +114,6 @@ SUBROUTINE STRPSRB(LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,ISUB,TAUW,TOP,NCL,
       ENDIF
 !......................................................................
 !     subroutine LESEN - determination of atmospheric profiles
-!     input  - LATMOS,VIS,INDEX
-!     output - NLEV,SOL,DZ,PRESS,ALT,TEMP,ROL,ROH,RO3,SCA,RAY
       CALL LESEN(LATMOS,VIS,INDEX,NLEV,SOL,DZ,PRESS,ALT,TEMP,ROL,ROH,RO3,SCA,RAY)          
 
 !     calculation of the precitable water as function of relative
@@ -204,7 +202,7 @@ SUBROUTINE STRPSRB(LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,ISUB,TAUW,TOP,NCL,
       AA      = 0.
 
       DO 50  I = 2 , NLEV
-        A       =  A + TOHNW(I-1)I
+        A       =  A + TOHNW(I-1)
         AA      =  AA + TAU(I-1)
         DW      =  AA/COSZEN
         DW      =  DMIN1(100.0D0,DW)
@@ -263,9 +261,12 @@ SUBROUTINE STRPSRB(LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,ISUB,TAUW,TOP,NCL,
       END
 ! --------------------------------------------------------------------------/ Fin Main
 
+
 ! --------------------------------------------------------------------------
       SUBROUTINE LESEN(LATMOS,VIS,INDEX,NLEV,SOL,DZ,PRESS,ALT,TEMP,ROL,ROH,RO3,SCA,RAY)
 !            determination of atmospheric profiles
+!     input  - LATMOS,VIS,INDEX
+!     output - NLEV,SOL,DZ,PRESS,ALT,TEMP,ROL,ROH,RO3,SCA,RAY
 ! --------------------------------------------------------------------------
 !     LATMOS  : atmosphere type
 !               1 - tropical

@@ -118,7 +118,7 @@ C
       DATA INTVA / 20, 16,  1,  0,  0,  0,  0,  1/
 C      
       DATA INTVE / 29, 30, 37,  0,  0,  0,  0, 37/
-C
+
       DO 10   I =  1 ,  22
    10 INDEX(I) = I
       DO 20   I = 23 , 135
@@ -128,7 +128,9 @@ C
       IF (ICLOUD .GT. 0) THEN
       LCLOUD = .TRUE.
       ENDIF
-C
+C      write (*,333) 'Alb:',SFCALB,'Vis:',VIS,'Temp:',
+C     & tstat,'Hr:',rf,'Alt:',zstat
+  333 format (5(A6,F7.2) )    
 C......................................................................
 C
 C     subroutine LESEN - determination of atmospheric profiles
@@ -961,8 +963,7 @@ C
       ROBOT = 216.67D0*ESAT/TBOT
       CLIM = (ROBOT-ROTOP)*0.2D0
       IF(CLIM.LT.CLOLWC) THEN
-      WRITE(*,*) ' WARNING: cloud LWC unrealistically large ',TEMP
-      read(*,*) 
+      WRITE(*,*) 'WARNING: cloud LWC unrealistically large',CLOLWC,CLIM 
       ENDIF
 C
       DO 40  IWO = 1 , NCL

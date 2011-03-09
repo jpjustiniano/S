@@ -1,6 +1,5 @@
 ! Copyright (C) 2011, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
 ! Programa para el calculo de la radiacion Global, Difusa y Directa.
-
 ! Revisar:
 !	Revisar que pasa  con pixeles en borde donde no es procesado el pixel lateral
 !	Almacenaje de variables Global, Difusa y Directa. Kt, Kd en matris interna.
@@ -23,13 +22,13 @@
  
  integer :: i, j, rec
  real ano, mes, diaj, dia 
- Real(8) :: HR, Albedo, temp, vis
  Real horad
  character (30) :: argument  ! Nombre de archivo 
  character(8)  :: fecha
  integer,dimension(8) :: tiempo, tiempof, tiempoa
  real(8), parameter :: pi= acos(-1.0), cdr= pi/180.0
  Logical :: Flag1 = .true.
+ Real(8) :: Tempt,Altt,HRt,Albedot,vist
  
  ! Variables NETCDF archivo entrada
  integer :: ncid, ncid_in, ncid_var, status
@@ -40,7 +39,7 @@
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
  Integer, dimension(:,:), allocatable :: CH1_max, CH1_min
  integer, dimension(:,:), allocatable :: Lat_CH1 , Lon_CH1, Lat_CH4 , Lon_CH4
- integer, dimension(:,:), allocatable :: Alt !, Temp, HR, Vis, Albedo
+ integer, dimension(:,:), allocatable :: Alt, Temp, HR, Vis, Albedo
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
@@ -199,6 +198,10 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
  allocate (Lon_CH4 (Nx, Ny) )
  allocate (CH1_max(NXf,NYf),CH1_min(NXf,NYf))
  allocate (Alt(NXf,NYf))
+ allocate (Albedo(NXf,NYf))
+ allocate (Temp(NXf,NYf))
+ allocate (HR(NXf,NYf))
+! allocate (Vis(NXf,NYf))
 
  ! Lectura de matrices 
  call check( nf90_get_var(ncid, hora_varid, hora) )
@@ -337,7 +340,12 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 
  !Lectura de datos altura
  call check( nf90_open('variables.nc', nf90_nowrite, ncid_var) )
+ call check( nf90_inq_varid(ncid_var, "Temp", Temp_varid) )
+ call check( nf90_inq_varid(ncid_var, "HR", HR_varid) )
+ !call check( nf90_inq_varid(ncid_var, "Vis", Vis_varid) )
+ call check( nf90_inq_varid(ncid_var, "Albedo", Albedo_varid) )
  call check( nf90_inq_varid(ncid_var, "Alt", Alt_varid) )
+ 
  call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
  
  do rec = 1, Nhora
@@ -352,30 +360,18 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 	start(3) = rec
 
 	!Lectura de datos climatologicos
-	!call check( nf90_inq_varid(ncid_var, "Temp", Temp_varid) )
-	!call check( nf90_inq_varid(ncid_var, "HR", HR_varid) )
-	!call check( nf90_inq_varid(ncid_var, "Vis", Vis_varid) )
-	!call check( nf90_inq_varid(ncid_var, "Albedo", Albedo_varid) )
-	!
-	!call check( nf90_get_var (ncid_var, Temp_varid, Temp, start = start, &
-	!						   count = countf) )
-	!call check( nf90_get_var (ncid_var, HR_varid, HR, start = start, &
-	!						   count = countf) )
-	!call check( nf90_get_var (ncid_var, Vis_varid, vis, start = start, &
-	!						   count = countf) )
-	!call check( nf90_get_var (ncid_var, Albedo_varid, Albedo, start = start, &
-	!						   count = countf) )
+	call check( nf90_get_var (ncid_var, Temp_varid, Temp, start, count = countf) )
+	call check( nf90_get_var (ncid_var, HR_varid, HR, start, count = countf) )
+	!call check( nf90_get_var (ncid_var, Vis_varid, vis, start, count = countf) )
+	call check( nf90_get_var (ncid_var, Albedo_varid, Albedo, start, count = countf) )
 	
-	  Temp = 293. ! (K)
-	  
-	  HR = .4 	! (0-1. ) 
-	  albedo = .20! (0-1.)
-	  vis = 10.	! (km)
+!	  Temp = 293. ! (K)
+!	  HR = .4 	! (0-1. ) 
+!	  albedo = .20! (0-1.)
+!	  vis = 10.	! (km)
 		
 	
-	call check( nf90_get_var(ncid, CH1_varid, CH1_in, start = start, &
-						   count = countf) )						   	!Cambia start para la siguiente istruccion?			
-						   		   
+	call check( nf90_get_var(ncid, CH1_varid, CH1_in, start, count = countf) ) !Cambia start para la siguiente istruccion?					   		   
 	call check( nf90_get_var(ncid, CH4_varid, CH4_in, start, count) )
 	
 	Select Case (NInt(horad*10)) ! Selector de maximo y minimos
@@ -450,7 +446,6 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 	
 	print *,'rec: ',rec
 		
-	
 
 	Do j = 1, NYf
 		
@@ -468,23 +463,23 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
                    
 ! / No se esta usando 
 
-		! calculate time for sunrise
-		COWSR = -1.0*TAN(DECR)*TAN(YLATR)
-		if (COWSR .LT. -1.0) then
-			write(*,*) ' No sunset, No Sunrise: 24 hr insolation', i, j, Lon_CH1(NXf/2,j), Lat_CH1(NXf/2,j)
-			TSRA  =  0.0
-		else if (COWSR .GT. 1.0) then
-			write(*,*) ' Dark side of the earth, no insolation', i, j, Lon_CH1(NXf/2,j), Lat_CH1(NXf/2,j)
-		else	
-			WSR   = ACOS(COWSR)/CDR
-			TSRA  = 12.00 - WSR/15.
-		End if  
+!		! calculate time for sunrise
+!		COWSR = -1.0*TAN(DECR)*TAN(YLATR)
+!		if (COWSR .LT. -1.0) then
+!			write(*,*) ' No sunset, No Sunrise: 24 hr insolation', i, j, Lon_CH1(NXf/2,j), Lat_CH1(NXf/2,j)
+!			TSRA  =  0.0
+!		else if (COWSR .GT. 1.0) then
+!			write(*,*) ' Dark side of the earth, no insolation', i, j, Lon_CH1(NXf/2,j), Lat_CH1(NXf/2,j)
+!		else	
+!			WSR   = ACOS(COWSR)/CDR
+!			TSRA  = 12.00 - WSR/15.
+!		End if  
 	  
-		! calculate hours of start and end of day
-		TSSA  = 24.0-TSRA
-		TSRS  = TSRA - TIMCOR
-		TSSS  = TSSA - TIMCOR
-! /		
+!		! calculate hours of start and end of day
+!		TSSA  = 24.0-TSRA
+!		TSRS  = TSRA - TIMCOR
+!		TSSS  = TSSA - TIMCOR
+!! /		
 		!calculate time correction
 		ZN = 0.0
 		TIMCOR = (4.0*(15.0*ZN+Lon_CH1(i,j)/100.)+ET)/60.0
@@ -498,60 +493,80 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		THETA  = ACOS(COSZEN)/CDR
 		XI0   = 1367.00*E0*COSZEN
 		
-!$omp parallel private(XIM,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,Dir,Dif,Glob,TCLEARn,TDIRn,TCLOUDn)
+!$omp parallel private(XIM,Tempt,Altt,HRt,Albedot,Vist,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,&
+!$omp			& Dir,Dif,Glob,TCLEARn,TDIRn,TCLOUDn)
 !$omp do
 		Do i=1, NXf 	
 		! En funcion del archivo de altura se procesa o no el pixel.
-			 
-		  !change relative humidity and albedo from percentual to relative values
-		  !albedo = albedo/1000.0
-		  !HR     = HR /100.0
+		!Altt  = Alt(i,j)
+		Altt  = 400.
 			
-		  IF ( Alt(i,j) > 0. ) THEN 
+		  IF ( Altt > 0. ) THEN 
+			
+			!Tempt = Temp(i,j)/100.+ 273.15
+			Tempt = 300.
+			!HRt   =  HR(i,j)/10000.
+			HRt   = 0.4
+			Albedot = albedo(i,j)/100.
+			!Albedot = 0.3
+			!Vist = vis(i,j)
+			Vist = 10.
+			! calculation of the visibility at the station as function of visibility and altitude
+			vist   = vist * EXP( (LOG(100.0/vist)/1000.0)*Altt )
+			! test for visibility between 2 and 150 km
+			IF (Vist > 150.)  Vist = 150.
+			IF (Vist <   2.)  Vist =   2.
+
+			If (Albedot <0. .or. Albedot>1.) then
+				print *,'Albedo', i,j,rec,Albedot 
+				Albedot = .25
+			end if
+			If (HRt < 0. .or. HRt >1.) then
+				!print *,'HR', i,j,rec,HRt 				! No corregido en archivos de kiko
+				HRt  = .2
+			end if
+			If (Tempt<250. .or. Tempt>315.) then
+				print *,'Temp', i,j,rec,Tempt
+				Tempt=293.
+			end if
+			
 			! Calculo de Cobertura de nubes.
-			if ( CH1_max(i,j) > 2500 ) Then 
+			if ( CH1_max(i,j) > 2500 ) Then    		! Comprobar valor optimo de minimo de Maximos
 				XIM =  (CH1_in(i,j)-CH1_min(i,j))/((CH1_max(i,j)-CH1_min(i,j) ) *1.)
-			!print *, CH1_in(i,j),CH1_max(i,j), CH1_min(i,j), XIM
 			Else
 				!XIM = (CH1_in(i,j)-CH1_min(i,j))/((7000. - CH1_min(i,j))*1.)
 				 XIM = 0.
 			End if
 			
-			! calculation of the visibility at the station as function of visibility and altitude
-			 vis   = vis * EXP( (LOG(100.0/vis)/1000.0)*(Alt(i,j)/10.) )
-			! test for visibility between 2 and 150 km
-			 IF (VIS > 150.)  VIS = 150.
-			 IF (VIS <   2.)  VIS =   2.
-					
 			! Choose atmosphere by surface temperature
-			IF (temp < 297.0 .AND. temp > 290.5) THEN
+			IF (Tempt < 297.0 .AND. Tempt > 290.5) THEN
 				LATMOS = 2
-				TS     = temp - T2SFC
-			Else if (temp < 290.5 .AND. temp > 279.5) THEN
+				TS     = Tempt - T2SFC
+			Else if (tempt < 290.5 .AND. tempt > 279.5) THEN
 				LATMOS = 4
-				TS     = temp - T4SFC
-			Else IF(temp < 279.5 .AND. temp > 264.5) THEN
+				TS     = tempt - T4SFC
+			Else IF(tempt < 279.5 .AND. tempt > 264.5) THEN
 				LATMOS = 3
-				TS     = temp - T3SFC
-			Else IF(temp < 264.5) THEN
+				TS     = tempt - T3SFC
+			Else IF(tempt < 264.5) THEN
 				LATMOS = 5
-				TS     = temp - T5SFC
+				TS     = tempt - T5SFC
 			Else
 				LATMOS = 1
-				TS     = Temp - T1SFC
+				TS     = Tempt - T1SFC
 			end if
 		
-			
+
 			! Subroutine STRPSRB - calculate transmittance for clear sky
 			! input  - LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,ISUB,TAUW,TOP,NCL,INTVAL,WH2O,CLOLWC,CDR
-			! output - TRANS
-			
-			If((mod(i,5)==0) .or. flag1) then 
-				CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,0,IWP,ISUB,&	
-				&     0.0D0,TOP,NCL,INTVAL,Temp,HR,Alt(i,j)/10.,CLOLWC,CDR,TCLEARn,TDIRn)
+			! output - TRANS			
+			If((mod(i,5)==0) .or. flag1 .or. i==1 .or. j==1) then		 !Optimizar con un llamado para los tres parametros radiativos
+		!write (*,*) LATMOS,TS,ROFF,Albedot,vist,THETA,0,IWP,ISUB,0.0D0,TOP,NCL,INTVAL,Tempt,HRt,Altt
+				CALL STRPSRB(LATMOS,TS,ROFF,Albedot,vist,THETA,0,IWP,ISUB,&	
+				&     0.0D0,TOP,NCL,INTVAL,Tempt,HRt,Altt,CLOLWC,CDR,TCLEARn,TDIRn)
 
-				CALL STRPSRB(LATMOS,TS,ROFF,albedo,VIS,THETA,1,IWP,ISUB,&	
-				&    100.0D0,TOP,NCL,INTVAL,Temp,HR,Alt(i,j)/10.,CLOLWC,CDR,TCLOUDn,TDIRn2)
+				CALL STRPSRB(LATMOS,TS,ROFF,albedot,vist,THETA,1,IWP,ISUB,&	
+				&    100.0D0,TOP,NCL,INTVAL,Tempt,HRt,Altt,CLOLWC,CDR,TCLOUDn,TDIRn2)
 				
 				flag1= .false.
 			end if 
@@ -583,7 +598,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			
 			
 			IF(Dir < 0.0) Dir = 0.0
-			IF(Dif < 0.0) Dif = -1.
+			IF(Dif < 0.0) Dif = 0.
 						
 			Directa(i,j) = NInt(Dir*10)
 			Difusa (i,j) = NInt(Dif*10)

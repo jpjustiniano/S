@@ -7,7 +7,6 @@
 ! Procesamiento de solo Chile. Eliminar fuera de fronteras.
 
 ! Revisar:
-! Calculo de angulo de elevacion
 ! Problemas con maximos y minimos en meses que hay una sola imagen
 
 !Canal 1: [1728, 9020]
@@ -256,7 +255,6 @@ End do
 	write (16,*) ' Archivos procesados: ' , rec		
     close (16)
     
-    	
     go to 999
  End if
 
@@ -708,7 +706,7 @@ End do
         end if
     end do
 end do
-!$omp end do NOWAIT
+!$omp end do 
 
 !$omp do
  do i = 1, NX
@@ -730,7 +728,7 @@ end do
         end if
     end do
  end do
-!$omp end do NOWAIT
+!$omp end do 
 !$omp end parallel
 
 
