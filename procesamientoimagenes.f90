@@ -317,6 +317,7 @@ End do
 !		filename_out = ano//mes//'.nc'
 !	End if
     write (*,*) filename_out
+    write (*,*)
     write (16,*) filename_out
     write (16,*)
     call check( nf90_create(filename_out,NF90_64BIT_OFFSET, ncid) ) ! ncid, archivo de salida recortado
@@ -547,7 +548,7 @@ End do
 		if (CH1_in(i,j) < min1040(i,j)) then
 			min1040(i,j) = CH1_in(i,j)
 		end if
-	Case (111:112)
+	Case (111:113)
 		if (CH1_in(i,j) > max1110(i,j)) then
 			max1110(i,j) = CH1_in(i,j)
 		end if 								
@@ -561,28 +562,28 @@ End do
 		if (CH1_in(i,j) < min1140(i,j)) then
 			min1140(i,j) = CH1_in(i,j)
 		end if	
-	Case (121:127)
+	Case (121:128)
 		if (CH1_in(i,j) > max1240(i,j)) then
 			max1240(i,j) = CH1_in(i,j)
 		end if 								
 		if (CH1_in(i,j) < min1240(i,j)) then
 			min1240(i,j) = CH1_in(i,j)
 		end if	
-	Case (131:132)
+	Case (131:133)
 		if (CH1_in(i,j) > max1310(i,j)) then
 			max1310(i,j) = CH1_in(i,j)
 		end if 								
 		if (CH1_in(i,j) < min1310(i,j)) then
 			min1310(i,j) = CH1_in(i,j)
 		end if		
-	Case (136:137)
+	Case (136:138)
 		if (CH1_in(i,j) > max1340(i,j)) then
 			max1340(i,j) = CH1_in(i,j)
 		end if 								
 		if (CH1_in(i,j) < min1340(i,j)) then
 			min1340(i,j) = CH1_in(i,j)
 		end if	
-	Case (141:142)
+	Case (141:143)
 		if (CH1_in(i,j) > max1410(i,j)) then
 			max1410(i,j) = CH1_in(i,j)
 		end if 								
@@ -596,7 +597,7 @@ End do
 		if (CH1_in(i,j) < min1440(i,j)) then
 			min1440(i,j) = CH1_in(i,j)
 		end if		
-	Case (161:162)
+	Case (161:163)
 		if (CH1_in(i,j) > max1610(i,j)) then
 			max1610(i,j) = CH1_in(i,j)
 		end if 								
@@ -610,7 +611,7 @@ End do
 		if (CH1_in(i,j) < min1640(i,j)) then
 			min1640(i,j) = CH1_in(i,j)
 		end if			
-	Case (171:172)
+	Case (171:173)
 		if (CH1_in(i,j) > max1710(i,j)) then
 			max1710(i,j) = CH1_in(i,j)
 		end if 								
@@ -631,7 +632,7 @@ End do
 		if (CH1_in(i,j) < min1840(i,j)) then
 			min1840(i,j) = CH1_in(i,j)
 		end if		
-	Case (191:192)
+	Case (191:193)
 		if (CH1_in(i,j) > max1910(i,j)) then
 			max1910(i,j) = CH1_in(i,j)
 		end if 								
@@ -645,7 +646,7 @@ End do
 		if (CH1_in(i,j) < min1940(i,j)) then
 			min1940(i,j) = CH1_in(i,j)
 		end if			
-	Case (201:202)
+	Case (201:203)
 		if (CH1_in(i,j) > max2010(i,j)) then
 			max2010(i,j) = CH1_in(i,j)
 		end if 								
@@ -666,7 +667,7 @@ End do
 		if (CH1_in(i,j) < min2140(i,j)) then
 			min2140(i,j) = CH1_in(i,j)
 		end if			
-	Case (221:222)
+	Case (221:223)
 		if (CH1_in(i,j) > max2210(i,j)) then
 			max2210(i,j) = CH1_in(i,j)
 		end if 								
