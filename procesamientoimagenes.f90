@@ -1,4 +1,4 @@
-! Copyright (C) 2011, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
+! Copyright (C) 2010 - 2011, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
 ! Programa para el filtraje y almacenamiento de imagenes satelitales en un archivo mensual.
 ! Funciona con horas en UTC.
 
@@ -36,6 +36,7 @@
  Real    :: az,el,ha,dec,soldst
  character (30) :: argument  ! Nombre de archivo de lista
  character (30) :: filename  ! Nombres dentro de la lista
+ character (30) :: filenamepathin, pathin, pathout  ! Nombres dentro de la lista
  character (23) :: filename_out
  character (len = 27) :: string
  integer :: i=1,j=1, rec=1, noct= 0, k
@@ -45,7 +46,7 @@
  integer, parameter :: NLat= 432, Nlon= 2255
  integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny)*4-3
  integer, dimension (Nlon,NLat) :: Latitud , Longitud
- Integer :: L1, L2, TID
+ Integer :: L1, L2, TID, TIDmax
  Real :: mm
  
  ! Variables NETCDF 
@@ -89,9 +90,16 @@
  min1410=10000;min1440=10000;min1610=10000;min1710=10000;min1740=10000;min1840=10000;min1910=10000
  min1940=10000;min2010=10000;min2040=10000;min2140=10000;min2210=10000;min2240=10000
 !********************************************************** Fin declaracion Variables
- TID = 1
+ 
+ ! Parametros de uso
+ pathin = '/media/Elements/dm/'  ! Directorio de archivos de entrada.. NO incorporado aun.
+ pathout = '/media/Elements/dm/' ! Directorio de archivos de salida.. NO incorporado aun
+ TIDmax = 6    ! Numero de procesadores maximo a utilizar
+ 
+ 
+ 
 !$    TID = omp_get_num_procs()
-!$		If (TID>6) TID = 6
+!$		If (TID>6) TID = TIDmax
 !$    call OMP_SET_NUM_THREADS(TID)
 
  
@@ -183,6 +191,7 @@ End do
  End If
  
 100 read (8,*, IOSTAT=errorread) filename
+filenamepathin = pathin//filename
  if(errorread == -1) then
     write (16,*)
     write (*,*)
@@ -521,6 +530,7 @@ End do
  ihorat = (ihora + (idia-1)*24)  ! Hora (hr_mes*100)
  call check( nf90_put_var(ncid, hora_varid, ihorat, start_hora)  )  ! Graba hora
  call check( nf90_open(trim(filename), nf90_nowrite, ncid_in) )  ! Abre archivo de lectura, ncid_in
+ !call check( nf90_open(trim(filenamepathin), nf90_nowrite, ncid_in) )  ! Abre archivo de lectura en Disco externo! ncid_in
  
  call check( nf90_inq_varid(ncid_in, "gvar_ch1_fine", CH1_in_varid) )
  call check( nf90_inq_varid(ncid_in, "gvar_ch4", CH4_in_varid) )
