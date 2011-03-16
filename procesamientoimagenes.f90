@@ -99,7 +99,7 @@
  
  
 !$    TID = omp_get_num_procs()
-!$		If (TID>6) TID = TIDmax
+!$		If (TID>TIDmax) TID = TIDmax
 !$    call OMP_SET_NUM_THREADS(TID)
 
  
@@ -833,7 +833,7 @@ END DO
 END SUBROUTINE diajuliano
 
 
- SUBROUTINE sunae(year,day,hour, lat, long,az,el,ha,dec,soldst)
+ SUBROUTINE sunae(year,day,hour, lat, long,az,el,ha,dec,soldst)  ! Sun's position, Michalsky
  !Real, intent(in) :: year
  !Real, intent(in) :: day
  !Real, intent(in) :: hour
