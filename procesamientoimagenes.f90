@@ -36,7 +36,8 @@
  Real    :: az,el,ha,dec,soldst
  character (30) :: argument  ! Nombre de archivo de lista
  character (30) :: filename  ! Nombres dentro de la lista
- character (30) :: filenamepathin, pathin, pathout  ! Nombres dentro de la lista
+ character (60) :: filenamepathin
+ character (30) :: pathin, pathout  ! Nombres dentro de la lista
  character (23) :: filename_out
  character (len = 27) :: string
  integer :: i=1,j=1, rec=1, noct= 0, k
@@ -44,8 +45,8 @@
  integer,dimension(8) :: tiempo, tiempof
  integer, parameter :: r4i = 1095, r4f = 1368 , r1i = r4i*4, r1f = r4f*4 ! CH1: 4380 a 5472
  integer, parameter :: NLat= 432, Nlon= 2255
- integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny)*4-3
- integer, dimension (Nlon,NLat) :: Latitud , Longitud
+ integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny)*4
+ integer, dimension (Nlon,NLat) :: Latitud , Longitud, scatter_phase
  Integer :: L1, L2, TID, TIDmax
  Real :: mm
  
@@ -56,21 +57,21 @@
  real :: x(NX), y(NY), xf(NXf), yf(NYf)
  integer, dimension (9020, 1728) :: CH1_out
  integer, dimension (Nlon,NLat) :: CH4_out   ! Matrices de archivo original
- integer, dimension(NX,NY)   :: CH4_in
+ integer, dimension (NX,NY)   :: CH4_in
  integer, dimension(NXf,NYf) :: CH1_in        !  Matrices de archivo recortado
  Integer, dimension(NXf,NYf) :: max1040,max1110,max1140,max1240,max1310,max1340,max1410,max1440,max1610
  Integer, dimension(NXf,NYf) :: min1040,min1110,min1140,min1240,min1310,min1340,min1410,min1440,min1610
  Integer, dimension(NXf,NYf) :: max1640, max1710,max1740,max1840,max1910,max1940,max2010,max2040,max2140
  Integer, dimension(NXf,NYf) :: min1640, min1710,min1740,min1840,min1910,min1940,min2010,min2040,min2140
  Integer, dimension(NXf,NYf) :: max2210, min2210, max2240, min2240
- integer, dimension((r4f- r4i)*4+1, (Ny-1)*4+1) :: Lat_CH1 , Lon_CH1
- integer, dimension (Nx,Ny)  :: Lat_CH4 , Lon_CH4
+ integer, dimension((r4f- r4i)*4, (Ny-1)*4) :: Lat_CH1 , Lon_CH1
+ integer, dimension (Nx,Ny)  :: Lat_CH4 , Lon_CH4, SP, SP_month
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
  integer :: CH1_varid, Ch4_varid
  integer :: CH1_max_varid, CH1_min_varid
- integer :: Lat_CH4_varid, Lon_CH4_varid , Lat_CH1_varid, Lon_CH1_varid
+ integer :: Lat_CH4_varid, Lon_CH4_varid , Lat_CH1_varid, Lon_CH1_varid, scatter_phase_varid
  integer :: max1040_varid, max1110_varid, max1140_varid, max1240_varid, max1310_varid, max1340_varid
  integer :: max1410_varid, max1440_varid, max1610_varid, max1640_varid, max1710_varid, max1740_varid
  integer :: max1840_varid, max1910_varid, max1940_varid, max2010_varid, max2040_varid, max2140_varid
@@ -120,9 +121,15 @@
  open (unit=12, file='longitude.CH4.media_hora.txt', status= 'old', Action='read' )
  read (12,*) Longitud
  Close (12)
+ open (unit=12, file='scatter_phase.txt', status= 'old', Action='read' )
+ read (12,*) scatter_phase
+ Close (12)
  
  Lat_CH4 = Latitud(r4i:r4f,:430)
  Lon_CH4 = Longitud(r4i:r4f,:430)
+ SP_month = scatter_phase(r4i:r4f,:430)
+
+
  
 Do i = 1, Nx
 	Do j =1, Ny
@@ -179,7 +186,7 @@ Do i =1, (r4f- r4i)*4+1
 	End do
 End do
  
-! Fin de Geolocalizacion 
+!/Fin de Geolocalizacion 
 
  
  call get_command_argument(1, argument) ! Nombre de archivo lista.txt
@@ -191,8 +198,8 @@ End do
  End If
  
 100 read (8,*, IOSTAT=errorread) filename
-filenamepathin = pathin//filename
- if(errorread == -1) then
+filenamepathin = trim(pathin)//trim(filename)
+ if(errorread == -1) then			! Fin de lista de archivos.
     write (16,*)
     write (*,*)
     write (16,*) " Terminado exitoso del procesamiento de imagenes"
@@ -268,8 +275,8 @@ filenamepathin = pathin//filename
  End if
 
  if(errorread > 0) then
-    write (16,*) " Error en lectura de nombre de archivo en archivo lista ", filename
-    write (*,*) " Error en lectura de nombre de archivo en archivo lista ", filename
+    write (16,*) " Error en lectura de nombre de archivo en archivo lista ", filenamepathin
+    write (*,*) " Error en lectura de nombre de archivo en archivo lista ", filenamepathin
     call check( nf90_close(ncid) )
     call check( nf90_close(ncid_in) )
     go to 999
@@ -320,11 +327,7 @@ filenamepathin = pathin//filename
 	End if	
     flag1 = .true.
     filename_out = ano//mes//'.media_hora.nc'
-!    If (imes < 10 ) then
-!		filename_out = ano//'0'//mes//'.nc'
-!	Else
-!		filename_out = ano//mes//'.nc'
-!	End if
+
     write (*,*) filename_out
     write (*,*)
     write (16,*) filename_out
@@ -352,6 +355,7 @@ filenamepathin = pathin//filename
     call check( nf90_def_var(ncid, "Lon_CH4", NF90_SHORT, dimids2d, Lon_CH4_varid) )
     call check( nf90_def_var(ncid, "Lat_CH1", NF90_SHORT, dimids2df, Lat_CH1_varid) )
     call check( nf90_def_var(ncid, "Lon_CH1", NF90_SHORT, dimids2df, Lon_CH1_varid) )
+    call check( nf90_def_var(ncid, "scatter_phase", NF90_SHORT, dimids2d, scatter_phase_varid) )
     
     call check( nf90_def_var(ncid, "max1040", NF90_SHORT, dimids2df, max1040_varid) )
     call check( nf90_def_var(ncid, "max1110", NF90_SHORT, dimids2df, max1110_varid) )
@@ -444,6 +448,10 @@ filenamepathin = pathin//filename
     call check( nf90_put_att(ncid, CH4_varid, "_CoordinateAxes", "time Lat_CH4 Lon_CH4") )
     call check( nf90_put_att(ncid, CH4_varid, "standard_name", "Canal Infrarojo") )
     
+    
+    !
+    !!! Atributos Scatter_phase !!
+    
     call check( nf90_put_att(ncid, hora_varid, "units", "UTC_hours_from_day1"))
     call check( nf90_put_att(ncid, hora_varid, "_CoordinateAxisType", "time"))
       
@@ -513,6 +521,7 @@ filenamepathin = pathin//filename
     call check( nf90_put_var(ncid, Lon_CH4_varid, Lon_CH4) )
     call check( nf90_put_var(ncid, Lat_CH1_varid, Lat_CH1) )
     call check( nf90_put_var(ncid, Lon_CH1_varid, Lon_CH1) )
+    
 
     rec = 0
     noct= 0
@@ -529,19 +538,26 @@ filenamepathin = pathin//filename
  
  ihorat = (ihora + (idia-1)*24)  ! Hora (hr_mes*100)
  call check( nf90_put_var(ncid, hora_varid, ihorat, start_hora)  )  ! Graba hora
- call check( nf90_open(trim(filename), nf90_nowrite, ncid_in) )  ! Abre archivo de lectura, ncid_in
- !call check( nf90_open(trim(filenamepathin), nf90_nowrite, ncid_in) )  ! Abre archivo de lectura en Disco externo! ncid_in
+ !call check( nf90_open(trim(filename), nf90_nowrite, ncid_in) )  ! Abre archivo de lectura, ncid_in
+ call check( nf90_open(trim(filenamepathin), nf90_nowrite, ncid_in) )  ! Abre archivo de lectura en Disco externo! ncid_in
  
  call check( nf90_inq_varid(ncid_in, "gvar_ch1_fine", CH1_in_varid) )
  call check( nf90_inq_varid(ncid_in, "gvar_ch4", CH4_in_varid) )
+ status = nf90_inq_varid (ncid_in, "scatter_phase", scatter_phase_varid)
+ if(status /= nf90_noerr) then
+	SP = SP_month
+ else 
+ 	call check( nf90_get_var(ncid_in, scatter_phase_varid, scatter_phase))
+ end if	
 
 		
  call check( nf90_get_var(ncid_in, CH4_in_varid, CH4_out)) 
  call check( nf90_get_var(ncid_in, CH1_in_varid, CH1_out))  
  
  ! Recorte de imagenes
- CH4_in = CH4_out(r4i:r4f,:NY)!925:1450
- CH1_in = CH1_out(r1i:r1f,:NYf)!3700:5800
+ CH4_in = CH4_out(r4i:r4f,:NY)
+ CH1_in = CH1_out(r1i:r1f,:NYf)
+ SP = scatter_phase(r4i:r4f,:430)
  
  ! Revision de matriz
 !$omp parallel 
@@ -744,8 +760,8 @@ end do
 
 
  ! Guardado de matriz recortada y revisada
- call check( nf90_put_var(ncid,CH4_varid, CH4_in, start = start, &
-									count = count) )
+ call check( nf90_put_var(ncid,scatter_phase_varid, SP, start, count) )
+ call check( nf90_put_var(ncid,CH4_varid, CH4_in, start = start,count = count) )
  call check( nf90_put_var(ncid,CH1_varid, CH1_in, start, countf))
  call check( nf90_close(ncid_in) )
  
