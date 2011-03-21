@@ -45,6 +45,7 @@
  integer,dimension(8) :: tiempo, tiempof
  integer, parameter :: r4i = 1095, r4f = 1368 , r1i = r4i*4, r1f = r4f*4 ! CH1: 4380 a 5472
  integer, parameter :: NLat= 432, Nlon= 2255
+ integer, parameter :: NLatF= 4*NLat, NlonF= 4*Nlon
  integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny)*4
  integer, dimension (Nlon,NLat) :: Latitud , Longitud, scatter_phase
  Integer :: L1, L2, TID, TIDmax
@@ -55,7 +56,7 @@
  integer, parameter :: NDIMS = 3, NDIMS_IN = 2	      ! We are writing 2D data.
 
  real :: x(NX), y(NY), xf(NXf), yf(NYf)
- integer, dimension (9020, 1728) :: CH1_out
+ integer, dimension (NlonF, NLatF) :: CH1_out
  integer, dimension (Nlon,NLat) :: CH4_out   ! Matrices de archivo original
  integer, dimension (NX,NY)   :: CH4_in
  integer, dimension(NXf,NYf) :: CH1_in        !  Matrices de archivo recortado
@@ -71,7 +72,7 @@
  integer :: CH1_in_varid, CH4_in_varid
  integer :: CH1_varid, Ch4_varid
  integer :: CH1_max_varid, CH1_min_varid
- integer :: Lat_CH4_varid, Lon_CH4_varid , Lat_CH1_varid, Lon_CH1_varid, scatter_phase_varid
+ integer :: Lat_CH4_varid, Lon_CH4_varid , Lat_CH1_varid, Lon_CH1_varid, scatter_phase_varid,sp_varid
  integer :: max1040_varid, max1110_varid, max1140_varid, max1240_varid, max1310_varid, max1340_varid
  integer :: max1410_varid, max1440_varid, max1610_varid, max1640_varid, max1710_varid, max1740_varid
  integer :: max1840_varid, max1910_varid, max1940_varid, max2010_varid, max2040_varid, max2140_varid
@@ -114,21 +115,23 @@
  call date_and_time(DATE=fecha, VALUES=tiempo)
  open (unit=16, file='log.txt')
 
-! Matrices de Geolocalizacion 
- open (unit=12, file='latitude.CH4.media_hora.txt', status= 'old', Action='read' )
+! Matrices de Geolocalizacion y scatter phase
+ open (unit=12, file='latitude.CH4.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
+ If(errorread/=0) print *,' Error de lectura de archivo: ', 'latitude.CH4.media_hora.txt'
  read (12,*) Latitud
  Close (12)
- open (unit=12, file='longitude.CH4.media_hora.txt', status= 'old', Action='read' )
+ open (unit=12, file='longitude.CH4.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
+ If(errorread/=0) print *,' Error de lectura de archivo: ', 'longitude.CH4.media_hora.txt'
  read (12,*) Longitud
  Close (12)
- open (unit=12, file='scatter_phase.txt', status= 'old', Action='read' )
+ open (unit=12, file='scatter_phase.txt', status= 'old', Action='read', IOSTAT=errorread )
+ If(errorread/=0) print *,' Error de lectura de archivo: ', 'scatter_phase.txt'
  read (12,*) scatter_phase
  Close (12)
  
  Lat_CH4 = Latitud(r4i:r4f,:430)
  Lon_CH4 = Longitud(r4i:r4f,:430)
  SP_month = scatter_phase(r4i:r4f,:430)
-
 
  
 Do i = 1, Nx
@@ -162,7 +165,7 @@ Do j =1, Ny
 	End do
 End do
 
-Do i =1, (r4f- r4i)*4+1
+Do i =1, NXf
 	Do j = 1, Ny-1
 		L1 =  Lat_CH1(i,(j-1)*4+1)	
 		L2 =  Lat_CH1(i,(j-1)*4+1+4)
@@ -355,7 +358,7 @@ filenamepathin = trim(pathin)//trim(filename)
     call check( nf90_def_var(ncid, "Lon_CH4", NF90_SHORT, dimids2d, Lon_CH4_varid) )
     call check( nf90_def_var(ncid, "Lat_CH1", NF90_SHORT, dimids2df, Lat_CH1_varid) )
     call check( nf90_def_var(ncid, "Lon_CH1", NF90_SHORT, dimids2df, Lon_CH1_varid) )
-    call check( nf90_def_var(ncid, "scatter_phase", NF90_SHORT, dimids2d, scatter_phase_varid) )
+    call check( nf90_def_var(ncid, "scatter_phase", NF90_SHORT, dimids, sp_varid) )
     
     call check( nf90_def_var(ncid, "max1040", NF90_SHORT, dimids2df, max1040_varid) )
     call check( nf90_def_var(ncid, "max1110", NF90_SHORT, dimids2df, max1110_varid) )
@@ -404,7 +407,7 @@ filenamepathin = trim(pathin)//trim(filename)
     call check( nf90_put_att(ncid, Lat_CH4_varid, "units", "degrees_north"))
     call check( nf90_put_att(ncid, Lat_CH4_varid, "missing_value", -300) )
     call check( nf90_put_att(ncid, Lat_CH4_varid, "valid_min", -32768) )
-    call check( nf90_put_att(ncid, Lat_CH4_varid, "valid_max", 32768) )
+    call check( nf90_put_att(ncid, Lat_CH4_varid, "valid_max", 32767) )
     call check( nf90_put_att(ncid, Lat_CH4_varid, "scale_factor", 0.01) )
     call check( nf90_put_att(ncid, Lat_CH4_varid, "_CoordinateAxisType", "Lat_CH4") )
     call check( nf90_put_att(ncid, Lat_CH4_varid, "standard_name", "Latitud_CH4") )
@@ -412,7 +415,7 @@ filenamepathin = trim(pathin)//trim(filename)
     call check( nf90_put_att(ncid, Lon_CH4_varid, "units", "degrees_east") )
     call check( nf90_put_att(ncid, Lon_CH4_varid, "missing_value", -300) )
     call check( nf90_put_att(ncid, Lon_CH4_varid, "valid_min", -32768) )
-    call check( nf90_put_att(ncid, Lon_CH4_varid, "valid_max", 32768) )
+    call check( nf90_put_att(ncid, Lon_CH4_varid, "valid_max", 32767) )
     call check( nf90_put_att(ncid, Lon_CH4_varid, "scale_factor", 0.01) )
     call check( nf90_put_att(ncid, Lon_CH4_varid, "_CoordinateAxisType", "Lon_CH4") )
     call check( nf90_put_att(ncid, Lon_CH4_varid, "standard_name", "Longitud_CH4") )
@@ -420,14 +423,14 @@ filenamepathin = trim(pathin)//trim(filename)
     call check( nf90_put_att(ncid, Lat_CH1_varid, "units", "degrees_north"))
     call check( nf90_put_att(ncid, Lat_CH1_varid, "missing_value", -300) )
     call check( nf90_put_att(ncid, Lat_CH1_varid, "valid_min", -32768) )
-    call check( nf90_put_att(ncid, Lat_CH1_varid, "valid_max", 32768) )
+    call check( nf90_put_att(ncid, Lat_CH1_varid, "valid_max", 32767) )
     call check( nf90_put_att(ncid, Lat_CH1_varid, "scale_factor", 0.01) )
     call check( nf90_put_att(ncid, Lat_CH1_varid, "_CoordinateAxisType", "Lat_CH1") )
     
     call check( nf90_put_att(ncid, Lon_CH1_varid, "units", "degrees_east") )
     call check( nf90_put_att(ncid, Lon_CH1_varid, "missing_value", -300) )
     call check( nf90_put_att(ncid, Lon_CH1_varid, "valid_min", -32768) )
-    call check( nf90_put_att(ncid, Lon_CH1_varid, "valid_max", 32768) )
+    call check( nf90_put_att(ncid, Lon_CH1_varid, "valid_max", 32767) )
     call check( nf90_put_att(ncid, Lon_CH1_varid, "scale_factor", 0.01) )
     call check( nf90_put_att(ncid, Lon_CH1_varid, "_CoordinateAxisType", "Lon_CH1") )
      
@@ -435,7 +438,7 @@ filenamepathin = trim(pathin)//trim(filename)
     call check( nf90_put_att(ncid, CH1_varid, "units", "Albedo*100%") )
     call check( nf90_put_att(ncid, CH1_varid, "missing_value", -300) )
     call check( nf90_put_att(ncid, CH1_varid, "valid_min", -32768) )
-    call check( nf90_put_att(ncid, CH1_varid, "valid_max", 32768) )
+    call check( nf90_put_att(ncid, CH1_varid, "valid_max", 32767) )
     call check( nf90_put_att(ncid, CH1_varid, "scale_factor", 0.01) )
     call check( nf90_put_att(ncid, CH1_varid, "_CoordinateAxes", "time Lat_CH1 Lon_CH1") )
     call check( nf90_put_att(ncid, CH1_varid, "standard_name", "Canal Visible") )
@@ -443,14 +446,18 @@ filenamepathin = trim(pathin)//trim(filename)
     call check( nf90_put_att(ncid, CH4_varid, "units", "temp_deg_C") )
     call check( nf90_put_att(ncid, CH4_varid, "missing_value", -300) )
     call check( nf90_put_att(ncid, CH4_varid, "valid_min", -32768) )
-    call check( nf90_put_att(ncid, CH4_varid, "valid_max", 32768) )
+    call check( nf90_put_att(ncid, CH4_varid, "valid_max", 32767) )
     call check( nf90_put_att(ncid, CH4_varid, "scale_factor", 0.01) )
     call check( nf90_put_att(ncid, CH4_varid, "_CoordinateAxes", "time Lat_CH4 Lon_CH4") )
     call check( nf90_put_att(ncid, CH4_varid, "standard_name", "Canal Infrarojo") )
     
     
-    !
-    !!! Atributos Scatter_phase !!
+    call check( nf90_put_att(ncid, sp_varid, "units", "degrees") )
+    call check( nf90_put_att(ncid, sp_varid, "valid_min", -32768) )
+    call check( nf90_put_att(ncid, sp_varid, "valid_max", 32767) )
+    call check( nf90_put_att(ncid, sp_varid, "scale_factor", 0.01) )
+    call check( nf90_put_att(ncid, sp_varid, "_CoordinateAxes", "time Lat_CH4 Lon_CH4") )
+    call check( nf90_put_att(ncid, sp_varid, "standard_name", "Scatter Phase") )
     
     call check( nf90_put_att(ncid, hora_varid, "units", "UTC_hours_from_day1"))
     call check( nf90_put_att(ncid, hora_varid, "_CoordinateAxisType", "time"))
@@ -548,6 +555,7 @@ filenamepathin = trim(pathin)//trim(filename)
 	SP = SP_month
  else 
  	call check( nf90_get_var(ncid_in, scatter_phase_varid, scatter_phase))
+ 	SP = scatter_phase(r4i:r4f,:NY)
  end if	
 
 		
@@ -557,7 +565,7 @@ filenamepathin = trim(pathin)//trim(filename)
  ! Recorte de imagenes
  CH4_in = CH4_out(r4i:r4f,:NY)
  CH1_in = CH1_out(r1i:r1f,:NYf)
- SP = scatter_phase(r4i:r4f,:430)
+ 
  
  ! Revision de matriz
 !$omp parallel 
@@ -760,7 +768,7 @@ end do
 
 
  ! Guardado de matriz recortada y revisada
- call check( nf90_put_var(ncid,scatter_phase_varid, SP, start, count) )
+ call check( nf90_put_var(ncid,sp_varid, SP, start = start,count = count) )
  call check( nf90_put_var(ncid,CH4_varid, CH4_in, start = start,count = count) )
  call check( nf90_put_var(ncid,CH1_varid, CH1_in, start, countf))
  call check( nf90_close(ncid_in) )
