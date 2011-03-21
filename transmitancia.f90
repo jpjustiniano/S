@@ -1,8 +1,7 @@
 ! Copyright (C) 2010 - 2011, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
 ! Programa para el calculo de la radiacion Global, Difusa y Directa.
 ! Revisar:
-!	Revisar que pasa  con pixeles en borde donde no es procesado el pixel lateral
-!	Almacenaje de variables Global, Difusa y Directa. Kt, Kd en matris interna.
+!	Revisar que pasa con pixeles en borde donde no es procesado el pixel lateral
 !	Dejar la matriz de visibilidad procesado segun altura
 
 !Canal 1: [1728, 9020]
@@ -10,10 +9,10 @@
 
 !Imagen Media Hora:
 !Canal 1_SI: [1, 4380]
-!Canal 1_ID: [1720, 5477]
+!Canal 1_ID: [1720, 5472]
  
 !Canal 4_SI: [1, 1095]
-!Canal 4_ID: [430, 1369]
+!Canal 4_ID: [430, 1368]
 
  Program trasmitancia
  use netcdf
@@ -21,7 +20,7 @@
  implicit none
  
  ! Variables Programa
- integer :: i, j, rec, ii,jj
+ integer :: i, j, rec, ii,jj, errorread
  real ano, mes, diaj, dia 
  Real horad
  character (30) :: argument  ! Nombre de archivo 
@@ -32,15 +31,17 @@
  Real(8) :: Tempt,Altt,HRt,Albedot,vist
  
  ! Variables NETCDF archivo entrada
- integer :: ncid, ncid_in, ncid_var, status
+ integer :: ncid, ncid_in, ncid_var, status 
  integer, parameter :: NDIMS = 3, NDIMS_IN	= 2     
- integer :: NX, NY, NXf, NYf, Nhora
+ integer :: NX, NY, NXf, NYf, Nhora, nboe
  real, dimension(:), allocatable :: x, y, xf, yf, hora
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out   	! Matrices de archivo original
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
  Integer, dimension(:,:), allocatable :: CH1_max, CH1_min
  integer, dimension(:,:), allocatable :: Lat_CH1 , Lon_CH1, Lat_CH4 , Lon_CH4
  integer, dimension(:,:), allocatable :: Alt, Temp, HR, Vis, Albedo
+ integer, dimension(:,:), allocatable :: fboe
+ integer, dimension(:), allocatable :: dboe
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
@@ -62,8 +63,8 @@
  
  ! Variables NETCDF archivo salida
  character(4)  :: cano
- character(2)  :: chora,cmin
- character(1)   :: cdia, cmes
+ character(2)  :: chora,cmin, cmes
+ character(1)   :: cdia
  character(25) :: filename_out, ccname
  character (30) :: filenamepathin, pathin, pathout
  integer :: ncid_rad
@@ -89,7 +90,7 @@
  real(8) :: Glob, Dif, Dir
  
 !********************************************************** Fin declaracion Variables
- 
+
  ! Parametros de uso
  pathin = '/media/Elements/dm/'  ! Directorio de archivos de entrada.. NO implementado aun.
  pathout = '/media/Elements/dm/' ! Directorio de archivos de salida.. NO implementado aun
@@ -184,14 +185,15 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
    
  
  ! allocate variables
- allocate(x(NX))
+ allocate(x(NX))  !innecesario
  allocate(y(NY))
  allocate(xf(NXf))
  allocate(yf(NYf))
  allocate(hora(Nhora))
  
- allocate(CH1_in (NXf,NYf))       ! imagenes invertidas
- allocate(CH4_in (NX,NY))
+ allocate (CH1_in (NXf,NYf))       ! imagenes invertidas
+ allocate (CH4_in (NX,NY))
+ !allocate (DI (NXf,NYf))
 
  allocate(Global(NXf,NYf))
  !allocate(Difusa(NXf,NYf))
@@ -234,7 +236,7 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
  write (cano,'(I4)') NInt(ano)
  If (mes < 10 ) then
 	write(cmes,'(I1)') NInt(mes)
-	filename_out = cano//'0'//cmes//'.media_hora.rad.nc'
+	filename_out = cano//'0'//trim(cmes)//'.media_hora.rad.nc'
  Else
 	write(cmes,'(I2)') NInt(mes)
 	filename_out = cano//cmes//'.media_hora.rad.nc'
@@ -365,6 +367,34 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  
  call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
  
+! ! Boetto
+! open (15,file='trainningmatrix.txt', status='old', ACTION='READ', IOSTAT=errorread)
+! if (errorread/=0) Then
+!	print *, ' No se encuentra archivo con matriz de entrenamiento'
+!	exit
+! end if	
+ 
+! nboe =0
+! Do
+!	read (15,*, iostat= errorread) 
+!	if (errorread/=0) exit
+!	nboe = nboe+1
+!end do
+ 
+! allocate (nboe, 4) fboe
+! allocate (nboe) dboe
+! do i=1, nboe
+!  read (15,1500) fboe(i), dboe(i)
+! end do
+ 
+ 
+!             C1  C4  SP  mes clase
+1500 format ( I4, I4, I4, I2, I2) ! Lectura de p
+
+ !/BOetto
+ 
+ 
+ 
  do rec = 1, Nhora
 	Directa = -1
 	!Difusa = -1
@@ -463,17 +493,26 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 	call check( nf90_get_var(ncid, CH1_max_varid, CH1_max) )
 	
 ! Prueba datos Boetto	
-		write(cdia,'(I1)') NInt(dia)+1
 		write(chora,'(I2)') Int(horad) 
 		write(cmin,'(I2)') NInt((horad-Int(horad))*60)
-		ccname=cano//'0'//cmes//'0'//cdia//chora//cmin//'.txt'
+		If (dia < 10 ) then
+			write(cdia,'(I1)') NInt(dia)+1
+			ccname=cano//'0'//cmes//'0'//trim(cdia)//chora//cmin//'.txt'
+		Else
+			write(cdia,'(I2)') NInt(dia)+1
+			ccname=cano//'0'//cmes//trim(cdia)//chora//cmin//'.txt'
+		End if
 		write (*,*) ccname, cdia,dia, chora,hora(rec), cmin
-		open (10,file=ccname)
+		open (10,file=ccname, status='old', ACTION='READ', IOSTAT=errorread)
+		if (errorread/=0) cycle
+		
 		read (10,*) ((cc(ii,jj), jj = 1, NYf), ii=1, NXf)
+		
+!		call LDA(NXf, Nyf, Nx, Ny,nboe, CH1_in, CH4_in, SP, nint(mes), fboe, dboe, DI )
+			
 ! /Prueba datos Boetto			
 	
 	print *,'rec: ',rec
-		
 
 	Do j = 1, NYf
 		
@@ -492,7 +531,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		!calculate time correction
 		ZN = 0.0
 		TIMCOR = (4.0*(15.0*ZN+Lon_CH1(i,j)/100.)+ET)/60.0
-		TSOLAR = horad+TIMCOR    !para entrada com horario em UTC
+		TSOLAR = horad+TIMCOR    !para entrada con horario en UTC
 		
 		! Characteristic hour angle WI corresponding to the W1-W2 interval
 		WSOLAR    = (12.00 - TSOLAR)*15.
@@ -501,14 +540,15 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		COSZEN = SIDEC*SILAT + CODEC*COLAT*COWI
 		THETA  = ACOS(COSZEN)/CDR
 		XI0   = 1367.00*E0*COSZEN
+
 		
 !$omp parallel private(XIM,Tempt,Altt,HRt,Albedot,Vist,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,&
 !$omp			& Dir,Dif,Glob,TCLEARn,TDIRn,TCLOUDn)
 !$omp do
 		Do i=1, NXf 	
 		! En funcion del archivo de altura se procesa o no el pixel.
-		Altt  = Alt(i,j)
-		!Altt  = 400.
+		!Altt  = Alt(i,j)
+		Altt  = 400.
 			
 		  IF ( Altt > 0. ) THEN 
 			
@@ -516,8 +556,8 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			Tempt = 300.
 			!HRt   =  HR(i,j)/10000.
 			HRt   = 0.4
-			Albedot = albedo(i,j)/100.
-			!Albedot = 0.3
+			!Albedot = albedo(i,j)/100.
+			Albedot = 0.15
 			!Vist = vis(i,j)
 			Vist = 100.
 			! calculation of the visibility at the station as function of visibility and altitude
@@ -621,7 +661,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 				Directa(i,j) = -1.0
 				!Difusa (i,j) = -1.0
 				Global(i,j)  = -1.0
-			End if  ! Fin de procesamiento de pixel con altura > 0.
+111			End if  ! Fin de procesamiento de pixel con altura > 0.
 		
 		End do
 		!$omp end do NOWAIT
