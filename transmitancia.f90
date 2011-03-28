@@ -63,8 +63,7 @@
  
  ! Variables NETCDF archivo salida
  character(4)  :: cano
- character(2)  :: chora,cmin, cmes
- character(1)   :: cdia
+ character(2)  :: chora,cmin, cmes, cdia
  character(25) :: filename_out, ccname
  character (30) :: filenamepathin, pathin, pathout
  integer :: ncid_rad
@@ -86,8 +85,8 @@
  integer :: LATMOS, IWP, ISUB, NCL, INTVAL
  real(8) :: COWSR, TSRA, WSR, TSSA, TSRS, TSSS
  real(8) :: XI0, XIM, RSFCN, G, GLINHA, BETA, TAUW, DTAUW, DELTAW
- Integer, dimension(:,:), allocatable :: Global, Difusa, Directa, cc !cc de boetto
- real(8) :: Glob, Dif, Dir
+ Integer, dimension(:,:), allocatable :: Global, Directa, cc !cc de boetto
+ real(8) :: Glob, Dir
  
 !********************************************************** Fin declaracion Variables
 
@@ -185,23 +184,20 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
    
  
  ! allocate variables
- allocate(x(NX))  !innecesario
- allocate(y(NY))
- allocate(xf(NXf))
- allocate(yf(NYf))
+! allocate(x(NX))  !innecesario
+! allocate(y(NY))
+! allocate(xf(NXf))
+! allocate(yf(NYf))
  allocate(hora(Nhora))
  
  allocate (CH1_in (NXf,NYf))       ! imagenes invertidas
  allocate (CH4_in (NX,NY))
- !allocate (DI (NXf,NYf))
 
  allocate(Global(NXf,NYf))
- !allocate(Difusa(NXf,NYf))
  allocate(Directa(NXf,NYf))
- allocate(cc(NXf,NYf))
+ !allocate(cc(NXf,NYf))
  
  Global = -3
- !Difusa = -3
  Directa= -3
  
  allocate (Lat_CH1 (NXf, NYf) )
@@ -213,7 +209,6 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
  allocate (Albedo(NXf,NYf))
  allocate (Temp(NXf,NYf))
  allocate (HR(NXf,NYf))
-! allocate (Vis(NXf,NYf))
 
  ! Lectura de matrices 
  call check( nf90_get_var(ncid, hora_varid, hora) )
@@ -236,11 +231,11 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
  write (cano,'(I4)') NInt(ano)
  If (mes < 10 ) then
 	write(cmes,'(I1)') NInt(mes)
-	filename_out = cano//'0'//trim(cmes)//'.media_hora.rad.nc'
+	cmes = '0'//trim(cmes)
  Else
 	write(cmes,'(I2)') NInt(mes)
-	filename_out = cano//cmes//'.media_hora.rad.nc'
  End if
+ filename_out = cano//cmes//'.media_hora.rad.nc'
  
  call check( nf90_create(filename_out,NF90_64BIT_OFFSET, ncid_rad) ) ! ncid, archivo de salida recortado
  ! Dimensiones
@@ -259,7 +254,6 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
  dimids2df =  (/ xf_dimid, yf_dimid/)
 
  call check( nf90_def_var(ncid_rad, "Global", NF90_SHORT, dimids, Global_varid) )
- !call check( nf90_def_var(ncid_rad, "Difusa", NF90_SHORT, dimids, Difusa_varid) )
  call check( nf90_def_var(ncid_rad, "Directa", NF90_SHORT, dimids, Directa_varid) )
  call check( nf90_def_var(ncid_rad, "Lat_CH4", NF90_SHORT, dimids2d, Lat_CH4_rad_varid) )
  call check( nf90_def_var(ncid_rad, "Lon_CH4", NF90_SHORT, dimids2d, Lon_CH4_rad_varid) )
@@ -286,14 +280,6 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
  call check( nf90_put_att(ncid_rad, Global_varid, "_CoordinateAxes", "time Lat_CH1 Lon_CH1") )
  call check( nf90_put_att(ncid_rad, Global_varid, "standard_name", "Radiación Global") )
  
- !call check( nf90_put_att(ncid_rad, Difusa_varid, "units", "W/m2") )
- !call check( nf90_put_att(ncid_rad, Difusa_varid, "missing_value", valid_min) )
- !call check( nf90_put_att(ncid_rad, Difusa_varid, "valid_min", valid_min) )
- !call check( nf90_put_att(ncid_rad, Difusa_varid, "valid_max", valid_max) )
- !call check( nf90_put_att(ncid_rad, Difusa_varid, "scale_factor", 0.1) )
- !call check( nf90_put_att(ncid_rad, Difusa_varid, "_CoordinateAxes", "time Lat_CH1 Lon_CH1") )
- !call check( nf90_put_att(ncid_rad, Difusa_varid, "standard_name", "Radiación Difusa") )
- 
  call check( nf90_put_att(ncid_rad, Directa_varid, "units", "W/m2") )
  call check( nf90_put_att(ncid_rad, Directa_varid, "missing_value", valid_min) )
  call check( nf90_put_att(ncid_rad, Directa_varid, "valid_min", valid_min) )
@@ -306,28 +292,28 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "units", "degrees_north"))
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "missing_value", -32767) )
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "valid_min", -32767) )
-call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "valid_max", 32768) )
+call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "valid_max", 32767) )
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "scale_factor", 0.01) )
 call check( nf90_put_att(ncid_rad, Lat_CH4_rad_varid, "_CoordinateAxisType", "Lat_CH4") )
 
 call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "units", "degrees_east") )
 !call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "missing_value", -32768) )
-call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "valid_min", -32768) )
-call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "valid_max", 32768) )
+call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "valid_min", -32767) )
+call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "valid_max", 32767) )
 call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "scale_factor", 0.01) )
 call check( nf90_put_att(ncid_rad, Lon_CH4_rad_varid, "_CoordinateAxisType", "Lon_CH4") )
 
 call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "units", "degrees_north"))
 !call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "missing_value", -32768) )
-call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "valid_min", -32768) )
-call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "valid_max", 32768) )
+call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "valid_min", -32767) )
+call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "valid_max", 32767) )
 call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "scale_factor", 0.01) )
 call check( nf90_put_att(ncid_rad, Lat_CH1_rad_varid, "_CoordinateAxisType", "Lat_CH1") )
 
 call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "units", "degrees_east") )
 !call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "missing_value", -32768) )
-call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "valid_min", -32768) )
-call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "valid_max", 32768) )
+call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "valid_min", -32767) )
+call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "valid_max", 32767) )
 call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "scale_factor", 0.01) )
 call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lon_CH1") )
 
@@ -358,14 +344,14 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  BETA = 0.5 - 3.*GLINHA/8. - 7.*GLINHA**3/128. - 9.*GLINHA**5/128. ! cloud backscatter coefficient
 
  ! Variables meteorologicas
- call check( nf90_open('variables.nc', nf90_nowrite, ncid_var) )
- call check( nf90_inq_varid(ncid_var, "Temp", Temp_varid) )
- call check( nf90_inq_varid(ncid_var, "HR", HR_varid) )
- !call check( nf90_inq_varid(ncid_var, "Vis", Vis_varid) )
- call check( nf90_inq_varid(ncid_var, "Albedo", Albedo_varid) )
- call check( nf90_inq_varid(ncid_var, "Alt", Alt_varid) )
+! call check( nf90_open('variables.nc', nf90_nowrite, ncid_var) )
+! call check( nf90_inq_varid(ncid_var, "Temp", Temp_varid) )
+! call check( nf90_inq_varid(ncid_var, "HR", HR_varid) )
+! call check( nf90_inq_varid(ncid_var, "Vis", Vis_varid) )
+! call check( nf90_inq_varid(ncid_var, "Albedo", Albedo_varid) )
+! call check( nf90_inq_varid(ncid_var, "Alt", Alt_varid) )
  
- call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
+ !call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
  
 ! ! Boetto
 ! open (15,file='trainningmatrix.txt', status='old', ACTION='READ', IOSTAT=errorread)
@@ -389,7 +375,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  
  
 !             C1  C4  SP  mes clase
-1500 format ( I4, I4, I4, I2, I2) ! Lectura de p
+!1500 format ( I4, I4, I4, I2, I2) ! Lectura de p
 
  !/BOetto
  
@@ -397,21 +383,23 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  
  do rec = 1, Nhora
 	Directa = -1
-	!Difusa = -1
 	Global = -1
+
+	print *,'rec: ',rec
 	
 	dia = int(hora(rec)/24)
 	horad = hora(rec)- dia*24
+
 	call diajuliano (dia, mes, ano, diaj) 
 	
 	start(3) = rec !!!  mes !
 	startm(3) = nint(mes)
-
+	
 	!Lectura de datos climatologicos
-	call check( nf90_get_var (ncid_var, Temp_varid, Temp, startm, count = countf) )
-	call check( nf90_get_var (ncid_var, HR_varid, HR, startm, count = countf) )
+	!call check( nf90_get_var (ncid_var, Temp_varid, Temp, startm, countf) )
+	!call check( nf90_get_var (ncid_var, HR_varid, HR, startm, countf) )
 	!call check( nf90_get_var (ncid_var, Vis_varid, vis, startm, count = countf) )
-	call check( nf90_get_var (ncid_var, Albedo_varid, Albedo, startm, count = countf) )
+	!call check( nf90_get_var (ncid_var, Albedo_varid, Albedo, startm, count = countf) )
 	
 !	  Temp = 293. ! (K)
 !	  HR = .4 	! (0-1. ) 
@@ -419,7 +407,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 !	  vis = 10.	! (km)
 		
 	
-	call check( nf90_get_var(ncid, CH1_varid, CH1_in, start, count = countf) ) !Cambia start para la siguiente istruccion?					   		   
+	call check( nf90_get_var(ncid, CH1_varid, CH1_in, start, countf) ) 					   		   
 	call check( nf90_get_var(ncid, CH4_varid, CH4_in, start, count) )
 	
 	Select Case (NInt(horad*10)) ! Selector de maximo y minimos
@@ -493,26 +481,26 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 	call check( nf90_get_var(ncid, CH1_max_varid, CH1_max) )
 	
 ! Prueba datos Boetto	
-		write(chora,'(I2)') Int(horad) 
-		write(cmin,'(I2)') NInt((horad-Int(horad))*60)
-		If (dia < 10 ) then
-			write(cdia,'(I1)') NInt(dia)+1
-			ccname=cano//'0'//cmes//'0'//trim(cdia)//chora//cmin//'.txt'
-		Else
-			write(cdia,'(I2)') NInt(dia)+1
-			ccname=cano//'0'//cmes//trim(cdia)//chora//cmin//'.txt'
-		End if
-		write (*,*) ccname, cdia,dia, chora,hora(rec), cmin
-		open (10,file=ccname, status='old', ACTION='READ', IOSTAT=errorread)
-		if (errorread/=0) cycle
+!		write(chora,'(I2)') Int(horad) 
+!		write(cmin,'(I2)') NInt((horad-Int(horad))*60)
+!		If (dia < 10 ) then
+!			write(cdia,'(I1)') NInt(dia)+1
+!			cdia='0'//trim(cdia)
+!		Else
+!			write(cdia,'(I2)') NInt(dia)+1
+!		End if
+!		ccname=cano//cmes//cdia//chora//cmin//'.txt'
+		!write (*,*) ccname, cdia,dia, chora,hora(rec), cmin
+		!open (10,file=ccname, status='old', ACTION='READ', IOSTAT=errorread)
+		!if (errorread/=0) cycle
 		
-		read (10,*) ((cc(ii,jj), jj = 1, NYf), ii=1, NXf)
-		
+		!read (10,*) ((cc(ii,jj), jj = 1, NYf), ii=1, NXf-4)
+
 !		call LDA(NXf, Nyf, Nx, Ny,nboe, CH1_in, CH4_in, SP, nint(mes), fboe, dboe, DI )
 			
 ! /Prueba datos Boetto			
 	
-	print *,'rec: ',rec
+	
 
 	Do j = 1, NYf
 		
@@ -543,7 +531,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 
 		
 !$omp parallel private(XIM,Tempt,Altt,HRt,Albedot,Vist,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,&
-!$omp			& Dir,Dif,Glob,TCLEARn,TDIRn,TCLOUDn)
+!$omp			& Dir,Glob,TCLEARn,TDIRn,TCLOUDn)
 !$omp do
 		Do i=1, NXf 	
 		! En funcion del archivo de altura se procesa o no el pixel.
@@ -580,15 +568,15 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			end if
 			
 !			! Calculo de Cobertura de nubes.
-!			if ( CH1_max(i,j) > 2500 ) Then    		! Comprobar valor optimo de minimo de Maximos
-!				XIM =  (CH1_in(i,j)-CH1_min(i,j))/((CH1_max(i,j)-CH1_min(i,j) ) *1.)
-!			Else
-!				!XIM = (CH1_in(i,j)-CH1_min(i,j))/((7000. - CH1_min(i,j))*1.)
-				 !XIM = 0.5000
-!			End if
+			if ( CH1_max(i,j) > 2500 .and. CH1_max(i,j)-CH1_min(i,j)>0.1 ) Then    		! Comprobar valor optimo de minimo de Maximos
+					XIM =  (CH1_in(i,j)-CH1_min(i,j))/((CH1_max(i,j)-CH1_min(i,j) ) *1.)
+			Else
+				!XIM = (CH1_in(i,j)-CH1_min(i,j))/((7000. - CH1_min(i,j))*1.)
+				 XIM = 0.000
+			End if
 
 ! Prueba datos Boetto	
-			XIM =cc(i,j)/10000.
+			!XIM =cc(i,j)/10000.
 ! /Prueba datos Boetto				
 			
 			! Choose atmosphere by surface temperature
@@ -625,8 +613,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			end if 
 			
 			! Calculo de irradiancia global, difusa y directa a partir de transmitancias calculadas.
-			
-			!calculate Global radiation 
+
 			Glob  = XI0 *((1.0 - XIM) * (TCLEARn - TCLOUDn) + TCLOUDn) !Revisar XIM de difusa
 			if (Glob < 0.0)  Glob = 0.
 			
@@ -636,55 +623,48 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 				TAUW = 1.0
 				DTAUW = EXP(-(1 - TAUW)/(BETA * TAUW))
 				Dir = DTAUW * TDIRn * XI0
-				!Dif = Glob - Dir
 			else if ((XIM < 0.95).AND.(XIM >= 0.)) then
 				TAUW = XIM + 0.05
 				DTAUW = EXP(-(1 - TAUW)/(BETA * TAUW))
 				Dir = DTAUW * TDIRn * XI0
-				!Dif = Glob - Dir
 			else
 				DTAUW = -2.0
 				Dir=-2.0
-				!Dif=-2.0
 				print *, 'Error en (i,j):',i,j, CH1_in(i,j), CH1_max(i,j), CH1_min(i,j), XIM
 			end if
 			
 			
 			IF(Dir < 0.0) Dir = 0.0
-			!IF(Dif < 0.0) Dif = 0.
 						
 			Directa(i,j) = NInt(Dir*10)
-			!Difusa (i,j) = NInt(Dif*10)
 			Global(i,j)  = NInt(Glob*10)			
 			
 			Else  ! Si esta fuera de territorio Chileno.
 				Directa(i,j) = -1.0
-				!Difusa (i,j) = -1.0
 				Global(i,j)  = -1.0
 111			End if  ! Fin de procesamiento de pixel con altura > 0.
 		
 		End do
-		!$omp end do NOWAIT
+		!$omp end do 
 !$omp end parallel
 		If (mod(j,5)==0) Flag1 = .true.
 		
-
 	End do
 
 
 	call date_and_time(DATE=fecha, VALUES=tiempof)
-	print *, Global(NXf-100,j-500),  Directa(NXf-100,j-500)  ! ,Difusa(NXf-100,j-500)
-	print *,'   Tiempo procesamiento: ', tiempof (5) - tiempoa (5) ,"horas", tiempof (6) - tiempoa (6),"min.", &
+	print *, Global(NXf-100,j-500),  Directa(NXf-100,j-500)  
+	print *,'   Tiempo procesamiento:    ', tiempof (6) - tiempoa (6),"min.", &
 					& tiempof (7) - tiempoa (7), "sec."
 	tiempoa = tiempof
 	
 
 	call check( nf90_put_var(ncid_rad, Global_varid, Global, start=start,count = countf))
-	!call check( nf90_put_var(ncid_rad, Difusa_varid, Difusa, start=start,count = countf))
 	call check( nf90_put_var(ncid_rad, Directa_varid,Directa, start=start,count = countf))
 	
  End do
  
+ call check( nf90_close(ncid_var) )
  call check( nf90_close(ncid_rad) )
  
  call date_and_time(DATE=fecha, VALUES=tiempof)
@@ -703,10 +683,6 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  end subroutine check
  
  
-End Program trasmitancia
-
-
-
 SUBROUTINE diajuliano (day, month, year, dayj)   
 ! Calculo de dia juliano
 
@@ -747,3 +723,4 @@ END DO
 
 END SUBROUTINE diajuliano
 
+End Program trasmitancia
