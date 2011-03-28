@@ -8,16 +8,17 @@
 
 ! Revisar:
 ! Problemas con maximos y minimos en meses que hay una sola imagen
+! Eliminar maximos
 
 !Canal 1: [1728, 9020]
 !Canal 4: [432, 2255]
 
 !Imagen Media Hora:
 !Canal 1_SI: [1, 4380]
-!Canal 1_ID: [1720, 5477]
+!Canal 1_ID: [1720, 5472]
  
 !Canal 4_SI: [1, 1095]
-!Canal 4_ID: [430, 1369]
+!Canal 4_ID: [430, 1368]
 
  Program ProcesamientoImagenes_media_hora
  use netcdf
@@ -43,10 +44,10 @@
  integer :: i=1,j=1, rec=1, noct= 0, k
  logical :: flag1= .false.
  integer,dimension(8) :: tiempo, tiempof
- integer, parameter :: r4i = 1095, r4f = 1368 , r1i = r4i*4, r1f = r4f*4 ! CH1: 4380 a 5472
+ integer, parameter :: r4i = 1095, r4f = 1368 , r1i = (r4i-1)*4+1, r1f = (r4f-1)*4+1 ! CH1: 4377 a 5469
  integer, parameter :: NLat= 432, Nlon= 2255
  integer, parameter :: NLatF= 4*NLat, NlonF= 4*Nlon
- integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny)*4
+ integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny-1)*4+1
  integer, dimension (Nlon,NLat) :: Latitud , Longitud, scatter_phase
  Integer :: L1, L2, TID, TIDmax
  Real :: mm
@@ -65,7 +66,7 @@
  Integer, dimension(NXf,NYf) :: max1640, max1710,max1740,max1840,max1910,max1940,max2010,max2040,max2140
  Integer, dimension(NXf,NYf) :: min1640, min1710,min1740,min1840,min1910,min1940,min2010,min2040,min2140
  Integer, dimension(NXf,NYf) :: max2210, min2210, max2240, min2240
- integer, dimension((r4f- r4i)*4, (Ny-1)*4) :: Lat_CH1 , Lon_CH1
+ integer, dimension(NXf,NYf) :: Lat_CH1 , Lon_CH1
  integer, dimension (Nx,Ny)  :: Lat_CH4 , Lon_CH4, SP, SP_month
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
@@ -129,9 +130,9 @@
  read (12,*) scatter_phase
  Close (12)
  
- Lat_CH4 = Latitud(r4i:r4f,:430)
- Lon_CH4 = Longitud(r4i:r4f,:430)
- SP_month = scatter_phase(r4i:r4f,:430)
+ Lat_CH4 = Latitud(r4i:r4f,1:430)
+ Lon_CH4 = Longitud(r4i:r4f,1:430)
+ SP_month = scatter_phase(r4i:r4f,1:430)
 
  
 Do i = 1, Nx
@@ -275,9 +276,7 @@ filenamepathin = trim(pathin)//trim(filename)
     close (16)
     
     go to 999
- End if
-
- if(errorread > 0) then
+ Else if(errorread > 0) then
     write (16,*) " Error en lectura de nombre de archivo en archivo lista ", filenamepathin
     write (*,*) " Error en lectura de nombre de archivo en archivo lista ", filenamepathin
     call check( nf90_close(ncid) )
@@ -553,6 +552,8 @@ filenamepathin = trim(pathin)//trim(filename)
  status = nf90_inq_varid (ncid_in, "scatter_phase", scatter_phase_varid)
  if(status /= nf90_noerr) then
 	SP = SP_month
+	print *, 'Imagen sin variable de Scatter Phase.', filename
+	write (16,*) 'Imagen sin variable de Scatter Phase.', filename
  else 
  	call check( nf90_get_var(ncid_in, scatter_phase_varid, scatter_phase))
  	SP = scatter_phase(r4i:r4f,:NY)
@@ -563,8 +564,8 @@ filenamepathin = trim(pathin)//trim(filename)
  call check( nf90_get_var(ncid_in, CH1_in_varid, CH1_out))  
  
  ! Recorte de imagenes
- CH4_in = CH4_out(r4i:r4f,:NY)
- CH1_in = CH1_out(r1i:r1f,:NYf)
+ CH4_in = CH4_out(r4i:r4f,1:NY)
+ CH1_in = CH1_out(r1i:r1f,1:NYf)
  
  
  ! Revision de matriz
@@ -719,9 +720,7 @@ filenamepathin = trim(pathin)//trim(filename)
 		print *, 'Imagen:',filename,' fuera de rango de max y min.'
 		write (16,*) 'Imagen:',filename,' fuera de rango de max y min.'
 	End Select	
-		
-	
-	!end if
+
 		! Correccion de datos 
 		if (CH1_in(i,j) > 15000) then
             write (16,*) "CH1_in(", i, ",",j, ") =", CH1_in(i, j) , filename, iano,diaj,ihora,"Corregido, vecinos"
@@ -787,9 +786,6 @@ end do
     stop 2
   end if
  end subroutine check
- 
- 
- End Program ProcesamientoImagenes_media_hora
 
 !*********************************************************************** /Main
 
@@ -982,3 +978,5 @@ data twopi,pi,rad/6.2831853,3.1415927,.017453293/
 !!   mnlong in degs, gmst in hours, jd in days if 2.4e6 added;
 !!   mnanom,eclong,oblqec,ra,and lmst in radians
  End subroutine
+
+ End Program ProcesamientoImagenes_media_hora
