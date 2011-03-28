@@ -184,10 +184,6 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
    
  
  ! allocate variables
-! allocate(x(NX))  !innecesario
-! allocate(y(NY))
-! allocate(xf(NXf))
-! allocate(yf(NYf))
  allocate(hora(Nhora))
  
  allocate (CH1_in (NXf,NYf))       ! imagenes invertidas
@@ -195,7 +191,7 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
 
  allocate(Global(NXf,NYf))
  allocate(Directa(NXf,NYf))
- !allocate(cc(NXf,NYf))
+ allocate(cc(NXf,NYf))
  
  Global = -3
  Directa= -3
@@ -353,7 +349,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  
  !call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
  
-! ! Boetto
+! ! Boetto3
 ! open (15,file='trainningmatrix.txt', status='old', ACTION='READ', IOSTAT=errorread)
 ! if (errorread/=0) Then
 !	print *, ' No se encuentra archivo con matriz de entrenamiento'
@@ -481,20 +477,20 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 	call check( nf90_get_var(ncid, CH1_max_varid, CH1_max) )
 	
 ! Prueba datos Boetto	
-!		write(chora,'(I2)') Int(horad) 
-!		write(cmin,'(I2)') NInt((horad-Int(horad))*60)
-!		If (dia < 10 ) then
-!			write(cdia,'(I1)') NInt(dia)+1
-!			cdia='0'//trim(cdia)
-!		Else
-!			write(cdia,'(I2)') NInt(dia)+1
-!		End if
-!		ccname=cano//cmes//cdia//chora//cmin//'.txt'
-		!write (*,*) ccname, cdia,dia, chora,hora(rec), cmin
-		!open (10,file=ccname, status='old', ACTION='READ', IOSTAT=errorread)
-		!if (errorread/=0) cycle
+		write(chora,'(I2)') Int(horad) 
+		write(cmin,'(I2)') NInt((horad-Int(horad))*60)
+		If (dia < 10 ) then
+			write(cdia,'(I1)') NInt(dia)+1
+			cdia='0'//trim(cdia)
+		Else
+			write(cdia,'(I2)') NInt(dia)+1
+		End if
+		ccname=cano//cmes//cdia//chora//cmin//'.txt'
+		write (*,*) ccname, cdia,dia, chora,hora(rec), cmin
+		open (10,file=ccname, status='old', ACTION='READ', IOSTAT=errorread)
+		if (errorread/=0) cycle
 		
-		!read (10,*) ((cc(ii,jj), jj = 1, NYf), ii=1, NXf-4)
+		read (10,*) ((cc(ii,jj), jj = 1, NYf), ii=1, NXf)
 
 !		call LDA(NXf, Nyf, Nx, Ny,nboe, CH1_in, CH4_in, SP, nint(mes), fboe, dboe, DI )
 			
