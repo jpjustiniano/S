@@ -265,13 +265,11 @@ filenamepathin = trim(pathin)//trim(filename)
 	call check( nf90_close(ncid) )
 	
 	call date_and_time(DATE=fecha, VALUES=tiempof)
-    write (*,*) '   Tiempo procesamiento: ', tiempof (5) - tiempo (5) ,"horas", tiempof (6) - tiempo (6),"min.", &
-					& tiempof (7) - tiempo (7), "sec."
+    write (*,200) tiempof(5) - tiempo(5), tiempof(6) - tiempo (6), tiempof(7) - tiempo(7)
 	write (*,*) '    Archivos procesados: ' , rec	
 	write (*,*) ' Archivos no procesados: ' , noct, '  (nocturnos)'
 	write (*,*)
-	write (16,*) 'Tiempo procesamiento: ',tiempof(5)-tiempo(5),'horas',tiempof(6)-tiempo(6),'min.',&
-			& tiempof(7)-tiempo(7), 'sec.'
+	write (16,200) tiempof(5) - tiempo(5), tiempof(6) - tiempo (6), tiempof(7) - tiempo(7)
 	write (16,*) ' Archivos procesados: ' , rec		
     close (16)
     
@@ -324,8 +322,7 @@ filenamepathin = trim(pathin)//trim(filename)
 		call date_and_time(VALUES=tiempof)
 		write (*,*) '    Archivos procesados : ' , rec
 		write (*,*) ' Archivos no procesados : ' , noct, '  (nocturnos)'
-		write (*,*) '   Tiempo procesamiento : ',tiempo(5)-tiempof(5),'horas',tiempo(6)-tiempof(6),'min.',&
-		& tiempo(7)-tiempof(7), 'sec.'
+		write (*,200) tiempof(5) - tiempo(5), tiempof(6) - tiempo (6), tiempof(7) - tiempo(7)
 	End if	
     flag1 = .true.
     filename_out = ano//mes//'.media_hora.nc'
@@ -776,6 +773,9 @@ end do
  
  Go to 100
  
+200 Format ('   Tiempo procesamiento: ',I3' hr., ',I3 'min., ',I3, 'sec.')
+
+ 
  999 Stop
  
  contains
@@ -814,22 +814,21 @@ END FUNCTION norm_hora
 
 SUBROUTINE diajuliano (day, month, year, dayj)   
 !This program calculates the day of year corresponding to a specified date.
+implicit none
 
-IMPLICIT NONE
-! Data dictionary: declare variable types, definitions, & units
-real, INTENT(IN):: day          !Day (dd)
-real, INTENT(IN) :: month        !Month (mm)
-real, INTENT(IN) :: year         !Year (yyyy)
-real, INTENT(out) :: dayj 		!Day of year
-INTEGER :: i            			!Index,variable
-INTEGER :: leap_day     			!Extra day for leap year
+real, intent(in):: day          !Day (dd)
+real, intent(in) :: month        !Month (mm)
+real, intent(in) :: year         !Year (yyyy)
+real, intent(out) :: dayj 		!Day of year
+integer :: i            			!Index,variable
+integer :: leap_day     			!Extra day for leap year
  
 ! Check for leap year, and add extra day if necessary
-IF ( MOD(year,400.) == 0 ) THEN
+IF ( mod(year,400.) == 0 ) THEN
     leap_day = 1    ! Years divisible by 400 are leap years
-ELSE IF ( MOD(year,100.) == 0 ) THEN
+ELSE IF ( mod(year,100.) == 0 ) THEN
     leap_day = 0    ! Other centuries are not leap years
-ELSE IF ( MOD(year,4.) == 0 ) THEN
+ELSE IF ( mod(year,4.) == 0 ) THEN
     leap_day = 1    ! Otherwise every 4th year 1S a leap year
 ELSE
     leap_day = 0    ! Other years are not leap years
@@ -854,19 +853,24 @@ END SUBROUTINE diajuliano
 
 
  SUBROUTINE sunae(year,day,hour, lat, long,az,el,ha,dec,soldst)  ! Sun's position, Michalsky
- !Real, intent(in) :: year
- !Real, intent(in) :: day
- !Real, intent(in) :: hour
- !Real, intent(in) :: lat
- !Real, intent(in) :: long
- !Real, intent(out) :: az
- !Real, intent(out) :: el
- !Real, intent(out) :: ha
- !Real, intent(out) :: dec
- !Real, intent(out) :: soldst
+ implicit none
+ Real, intent(in) :: year
+ Real, intent(in) :: day
+ Real, intent(in) :: hour
+ Real, intent(in) :: lat
+ Real, intent(in) :: long
+ Real, intent(out) :: az
+ Real, intent(out) :: el
+ Real, intent(out) :: ha
+ Real, intent(out) :: dec
+ Real, intent(out) :: soldst
+ 
+ real :: twopi, pi, rad
+ real :: delta, leap, jd, time
+ real :: mnlong, mnanom, eclong, oblqec, num, den, ra
+ real :: gmst, lmst, latrad, elc, refrac, soldia
 
-implicit real (a-z)
-data twopi,pi,rad/6.2831853,3.1415927,.017453293/
+ data twopi,pi,rad/6.2831853,3.1415927,.017453293/
   
 !   get the current julian date (actually add 2,400,000 for jd)
       delta=year-1949.
