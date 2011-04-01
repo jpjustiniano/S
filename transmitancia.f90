@@ -1,8 +1,11 @@
 ! Copyright (C) 2010 - 2011, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
 ! Programa para el calculo de la radiacion Global, Difusa y Directa.
+
+
 ! Revisar:
 !	Revisar que pasa con pixeles en borde donde no es procesado el pixel lateral
 !	Dejar la matriz de visibilidad procesado segun altura
+!	No esta calculando los atos de la primera linea de NYf
 
 !Canal 1: [1728, 9020]
 !Canal 4: [432, 2255]
@@ -225,7 +228,7 @@ call check( nf90_inq_varid(ncid, "min2240", min2240_varid) )
  !**************************************************** Creacion de archivo de salida
  
  write (cano,'(I4)') NInt(ano)
- If (mes < 10 ) then
+ If (mes .le. 9 ) then
 	write(cmes,'(I1)') NInt(mes)
 	cmes = '0'//trim(cmes)
  Else
@@ -650,8 +653,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 
 	call date_and_time(DATE=fecha, VALUES=tiempof)
 	print *, Global(NXf-100,j-500),  Directa(NXf-100,j-500)  
-	print *,'   Tiempo procesamiento:    ', tiempof (6) - tiempoa (6),"min.", &
-					& tiempof (7) - tiempoa (7), "sec."
+	write(*,300) tiempof (6) - tiempoa (6), tiempof(7) - tiempoa(7)
 	tiempoa = tiempof
 	
 
@@ -664,8 +666,10 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  call check( nf90_close(ncid_rad) )
  
  call date_and_time(DATE=fecha, VALUES=tiempof)
- write (*,*) '   Tiempo procesamiento: ', tiempof (5) - tiempo (5) ,"horas", tiempof (6) - tiempo (6),"min.", &
-					& tiempof (7) - tiempo (7), "sec."
+ write (*,200) tiempof(5)-tiempo(5),tiempof(6)-tiempo(6),tiempof(7)-tiempo(7)
+ 					
+200 Format ('   Tiempo procesamiento: ',I3' hr., ',I3 'min., ',I3, 'sec.')
+300 Format ('   Tiempo procesamiento: ',I3 'min., ',I3, 'sec.')
  
  999 Stop
  
