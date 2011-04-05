@@ -3,7 +3,7 @@
 
 ! Revisar:
 ! dimids
-! Hora inicial sin datos.
+! Hora inicial sin datos. 
 
 
 Program ProcesamientoImagenes_media_hora
@@ -14,6 +14,7 @@ Program ProcesamientoImagenes_media_hora
  ! Variables Programa
  integer, parameter :: Nimagenesdiamin = 5
  integer, parameter :: Nimagenesdiamax = 26 
+ real(8), parameter :: pi= acos(-1.0), cdr= pi/180.0
  integer :: horaf, horaini, horasdia, diasmes
  integer :: largofilein, lat, lon, i , j, k
  integer :: ano, mes, diaj
@@ -24,14 +25,14 @@ Program ProcesamientoImagenes_media_hora
  character(25) :: filename_out
  integer :: Nhora, NXf, NYf
  integer,dimension(8) :: tiempo, tiempof, tiempoa
- integer :: TIDmax
+ integer :: TIDmax, tz
  
- !spline
-  REAL :: DX, H, ALPHA, BETA, GAMMA, ETA
+ ! Suane
+  REAL ::  az,el,ha,dec,soldst
  
  
- integer, dimension(:), allocatable :: Nimagenesdia
- real, dimension (:), allocatable :: rxo, ryo, xo, yo, hora, hora_hor, b, c, d
+ integer, dimension(:), allocatable :: Nimagenesdia, ryo
+ real, dimension (:), allocatable :: rxo, xo, yo, hora, hora_hor, Ex_h, Eryo
  integer, dimension (:,:), allocatable :: Nimagen, Glo, Dir, Lat_CH1, Lon_CH1
  real, dimension (:,:), allocatable :: horaimagenes 
  integer, dimension (:,:), allocatable :: imagenesdia
@@ -55,9 +56,11 @@ Program ProcesamientoImagenes_media_hora
  print *, '                  Calculo de la interpolacion de Global y Directa'
  print *, '                  ************************************************'
  print *
+ 
+ call date_and_time(DATE=fecha, VALUES=tiempo)
+ tiempoa = tiempo
 
-
- TIDmax = 6    ! Numero de procesadores maximo a utilizar
+ TIDmax = 3    ! Numero de procesadores maximo a utilizar
  
  !$    TID = omp_get_num_procs()
  !$		If (TID>TIDmax) TID = TIDmax
@@ -240,7 +243,7 @@ Program ProcesamientoImagenes_media_hora
  allocate (xo(horasdia))
  allocate (yo(horasdia))
  allocate (horaimagenes(Nimagenesdiamax, diasmes))
- 
+ allocate (Ex_h(horasdia))
  
  ! Nimagenesdia (dia) : var. temporal con numero de imagenes x dia i
  ! Nimagen (dia, imagendia) : Numero de imagen del total
@@ -261,12 +264,12 @@ Program ProcesamientoImagenes_media_hora
  
 
  horaf = horaini + horasdia
- 
- xo(1)= (horaini+0.5)*100
+ tz = 3
+ xo(1)= horaini+0.5 ! Hora en UTC
  Do i=2,horasdia
-	xo(i)= xo(i-1)+100
+	xo(i)= xo(i-1)+1
  end do
- call check( nf90_put_var(ncid_prom, hora_varid_prom, xo) )
+ call check( nf90_put_var(ncid_prom, hora_varid_prom, xo) ) 
  
  start = (/ 1, 1, 1 /)
  count = (/ NXf, NYf, 1 /)
@@ -286,9 +289,7 @@ Program ProcesamientoImagenes_media_hora
 	allocate (Directa_hor (NXf, NYf, horasdia))
 	allocate (rxo(Nimagenesdia(i)))
 	allocate (ryo(Nimagenesdia(i)))
-	allocate (b(Nimagenesdia(i)))
-	allocate (c(Nimagenesdia(i)))
-	allocate (d(Nimagenesdia(i)))
+	allocate (Eryo(Nimagenesdia(i)))
 	
 	Global_hor = 0
 	Directa_hor = 0
@@ -300,27 +301,33 @@ Program ProcesamientoImagenes_media_hora
 	call check( nf90_get_var(ncid, Directa_varid, Directa, start, count ))
 	
 	
-	rxo = (horaimagenes(:,i)-(i-1)*24)*100
+	rxo = horaimagenes(:,i)-(i-1)*24
 	
 	call diajuliano (i, mes, ano, diaj)   ! entrada de reales en ves de enteros.
-	call sunae(iano,diaj,ihora, latit, longit,az,el,ha,dec,soldst)  
+
 	
 	 exter: Do lon = 1, Nxf			! Se procesa en NXxNY la matriz 3D diaria
 		inter: Do lat = 2, Nyf
 				if (Global (lon,lat, Nimagen(i,2))<0) cycle inter
 				if (Directa (lon,lat, Nimagen(i,2)) < 0) cycle inter
 				
+				do k = 1, horasdia
+				call sunae (ano,diaj,xo(k),Lat_CH1(lon,lat)/100., Lon_CH1(lon,lat)/100., az,el,ha,dec,soldst)
+					Ex_h(K) = 1367.*(1+0.033*cos(360.*diaj/365.))*cos((90.-el)*cdr)
+				end do	
+				do k = 1,Nimagenesdia(i)
+				call sunae (ano,diaj,horaimagenes(k,i),Lat_CH1(lon,lat)/100., Lon_CH1(lon,lat)/100., az,el,ha,dec,soldst)
+					Eryo(K) = 1367.*(1+0.033*cos(360.*diaj/365.))*cos((90.-el)*cdr)
+				end do	
+				
 				! Agregar puntos de salida y puesta del sol
 				
-				ryo = real(Global(lon,lat,:))
+				ryo = Global(lon,lat,Nimagen(i,1):Nimagen(i,Nimagenesdia(i)))
 				where (ryo<0) ryo=0
-				
-				call InterLinealPond()
+				!print *, Nimagen(i,1),Nimagen(i,Nimagenesdia(i)), el, ((90.-el)*cdr)
+				!print *, Global(lon,lat,Nimagen(i,1):Nimagen(i,Nimagenesdia(i)))
+				call InterLinealPond( horaini,horasdia, Nimagenesdia(i),rxo,ryo, Eryo, xo, Ex_h, yo )
 
-				!call spline (rxo, ryo, b, c, d,Nimagenesdia(i)) 
-				!Do j= 1, horasdia
-				!	yo(j) = ispline(xo(j), rxo, ryo, b, c, d, Nimagenesdia(i))			
-				!end do
 				Global_hor(lon,lat,:) = yo
 				!print *,'yo:', Global_hor(lon,lat,:)
 				
@@ -328,15 +335,10 @@ Program ProcesamientoImagenes_media_hora
 				ryo = real(Directa(lon,lat,:))
 				where (ryo<0) ryo=0
 				
-				call InterLinealPond()
+				call InterLinealPond( horaini,horasdia, Nimagenesdia(i),rxo,ryo, Eryo, xo, Ex_h, yo )
 				
-				!call spline (rxo, ryo, b, c, d,Nimagenesdia(i)) 
-				!Do j= 1, horasdia
-				!	yo(j) = ispline(xo(j), rxo, ryo, b, c, d, Nimagenesdia(i))			
-				!end do
 				Directa_hor(lon,lat,:) = yo
 				!print *, 'yo:',Directa_hor(lon,lat,:)
-
 				
 		end do inter
 	 end do exter
@@ -356,22 +358,59 @@ Program ProcesamientoImagenes_media_hora
 	deallocate (Global_hor )
 	deallocate (Directa_hor )
 	deallocate (rxo)
-	deallocate (ryo)
-	deallocate (b)
-	deallocate (c)
-	deallocate (d)
-	
-	
+	deallocate (ryo)	
+	call date_and_time(DATE=fecha, VALUES=tiempof)
+	print *
+	write (*,200) tiempof(5) - tiempoa(5) ,tiempof(6)- tiempoa(6),tiempof(7) - tiempoa(7)
+	print *
+	tiempoa = tiempof
  End do
 call date_and_time(DATE=fecha, VALUES=tiempof)
-print *
-write (*,200) tiempof(5) - tiempoa(5) ,tiempof(6)- tiempoa(6),tiempof(7) - tiempoa(7)
+print *, 'Tiempo Total:'
+write (*,200) tiempof(5) - tiempo(5) ,tiempof(6)- tiempo(6),tiempof(7) - tiempo(7)
 print *
 
 200 Format ('   Tiempo procesamiento: ',I3' hr., ',I3 'min., ',I3, 'sec.')
 300 Format ('   Tiempo procesamiento: ',I3 'min., ',I3, 'sec.')
 
  contains
+subroutine InterLinealPond ( horaini,horasdia,Nimagenesdia,rxo,ryo, Eryo, xo, Ex_h, yo )
+implicit none
+
+integer, intent(in) ::horaini,horasdia,Nimagenesdia
+real, dimension (:), intent(in) :: rxo, xo, Ex_h, Eryo
+integer, dimension (:), intent(in) :: ryo
+real, dimension (:), intent(out) :: yo
+integer :: i = 1, j= 1
+real :: k1, k2
+
+! write (*,*) 'rxo:',rxo
+! write (*,*) 'ryo:',ryo
+! write (*,*) 'xo:',xo
+! write (*,*) 'Ex_h:',Ex_h
+ yo=0.
+! read (*,*)
+ 
+ 
+exter: do i = 1, horasdia
+	inter: Do j = 1, Nimagenesdia
+		if (xo(i) > rxo(j) ) then
+			if (j>1) then 
+			 k1 = ryo(j-1)/Eryo(j-1)
+			 k2 = ryo(j)/Eryo(j)
+			 yo = (((xo(i)-rxo(j-1))/(rxo(j)-rxo(j-1)))*k1 +((rxo(j)-xo(i))/(rxo(j)-rxo(j-1)))*k2)*Ex_h(i)
+			else 
+			 yo = (ryo(j)/Eryo(j))*Ex_h(i)
+			end if
+		exit inter
+		end if 
+	end do inter
+end do exter
+
+
+end subroutine InterLinealPond
+ 
+ 
  subroutine check(status)
   integer, intent ( in) :: status
   if(status /= nf90_noerr) then
@@ -381,7 +420,7 @@ print *
  end subroutine check
  
 
-SUBROUTINE diajuliano (day, month, year, dayj)   
+ subroutine diajuliano (day, month, year, dayj)   
 !This program calculates the day of year corresponding to a specified date.
 implicit none
 
@@ -420,11 +459,10 @@ END DO
 
 END SUBROUTINE diajuliano
 
-
- SUBROUTINE sunae(year,day,hour, lat, long,az,el,ha,dec,soldst)  ! Sun's position, Michalsky
+ Subroutine sunae(year,day,hour, lat, long,az,el,ha,dec,soldst)  ! Sun's position, Michalsky
  implicit none
- Real, intent(in) :: year
- Real, intent(in) :: day
+ integer, intent(in) :: year
+ integer, intent(in) :: day
  Real, intent(in) :: hour
  Real, intent(in) :: lat
  Real, intent(in) :: long
@@ -447,7 +485,7 @@ END SUBROUTINE diajuliano
       jd=32916.5+delta*365.+leap+day+hour/24.
 !   1st no. is mid. 0 jan 1949 minus 2.4e6; leap=leap days since 1949
 !  the last yr of century is not leap yr unless divisible by 400
-      if (amod(year,100.).eq.0.0.and.amod(year,400.).ne.0.0) jd=jd-1.
+      if (mod(year,100).eq.0.0 .and. mod(year,400).ne.0.0) jd=jd-1.
 
 !   calculate ecliptic coordinates
       time=jd-51545.0
@@ -488,8 +526,8 @@ END SUBROUTINE diajuliano
 
 !   calculate Greenwich mean sidereal time in hours
       gmst=6.697375+.0657098242*time+hour 
-!   hour not changed to sidereal time since 'time' includes
-!   the fractional day 
+
+!   hour not changed to sidereal time since 'time' includes the fractional day 
       gmst = mod(gmst,24.)
       if(gmst.lt.0.) gmst=gmst+24.
 
@@ -508,28 +546,27 @@ END SUBROUTINE diajuliano
 
 !   calculate azimuth and elevation
       el=asin(sin(dec)*sin(latrad)+cos(dec)*cos(latrad)*cos(ha))
-!      az=asin(-cos(dec)*sin(ha)/cos(el))
+      az=asin(-cos(dec)*sin(ha)/cos(el))
 
 !!   this puts azimuth between 0 and 2*pi radians
-!      if(sin(dec)-sin(el)*sin(latrad).ge.0.) then
-!		if(sin(az).lt.0.) az=az+twopi
-!      else
-!      az=pi-az
-!      endif
+      if (sin(dec)-sin(el)*sin(latrad).ge.0.) then
+		if(sin(az).lt.0.) az=az+twopi
+      else
+      az=pi-az
+      endif
 !   if az=90 degs, elcritical=asin(sin(dec)/sin(latrad))
-!    elc=asin(sin(dec)/sin(latrad))
-!    if(el.ge.elc)az=pi-az
-!    if(el.le.elc.and.ha.gt.0.)az=twopi+az
+    elc=asin(sin(dec)/sin(latrad))
+    if(el.ge.elc)az=pi-az
+    if(el.le.elc.and.ha.gt.0.)az=twopi+az
 
 !   calculate refraction correction for US stan. atmosphere
 !   need to have el in degs before calculating correction
       el=el/rad
-!
+
       if(el.ge.19.225) then 
          refrac=.00452*3.51823/tan(el*rad)
       else if (el.gt.-.766.and.el.lt.19.225) then
-         refrac=3.51823*(.1594+.0196*el+.00002*el**2)/ &
-     &   (1.+.505*el+.0845*el**2)
+         refrac=3.51823*(.1594+.0196*el+.00002*el**2)/(1.+.505*el+.0845*el**2)
       else if (el.le.-.766) then
          refrac=0.0
       end if
@@ -537,19 +574,17 @@ END SUBROUTINE diajuliano
 !   note that 3.51823=1013.25 mb/288 C
       el=el+refrac
 !   elevation in degs
-!!
-!!   calculate distance to sun in A.U. & diameter in degs
-!      soldst=1.00014-.01671*cos(mnanom)-.00014*cos(2.*mnanom)
-!      soldia=.5332/soldst
+!   calculate distance to sun in A.U. & diameter in degs
+      soldst=1.00014-.01671*cos(mnanom)-.00014*cos(2.*mnanom)
+      soldia=.5332/soldst
 
-!!   convert az and lat to degs before returning
-!      az=az/rad
-!      lat=lat/rad
-!	 ha=ha/rad
-!	 dec=dec/rad
+!   convert az and lat to degs before returning
+    az=az/rad
+	ha=ha/rad
+	dec=dec/rad
 
-!!   mnlong in degs, gmst in hours, jd in days if 2.4e6 added;
-!!   mnanom,eclong,oblqec,ra,and lmst in radians
- End subroutine
+!   mnlong in degs, gmst in hours, jd in days if 2.4e6 added;
+!   mnanom,eclong,oblqec,ra,and lmst in radians
+End subroutine
 
 End program ProcesamientoImagenes_media_hora
