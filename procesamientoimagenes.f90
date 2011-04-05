@@ -9,6 +9,7 @@
 ! Revisar:
 ! Problemas con maximos y minimos en meses que hay una sola imagen
 ! Eliminar maximos
+! Mejoras a Correxion de pixeles
 
 !Canal 1: [1728, 9020]
 !Canal 4: [432, 2255]
@@ -97,7 +98,7 @@
  ! Parametros de uso
  pathin = '/media/Elements/dm/'  ! Directorio de archivos de entrada.. NO incorporado aun.
  pathout = '/media/Elements/dm/' ! Directorio de archivos de salida.. NO incorporado aun
- TIDmax = 6    ! Numero de procesadores maximo a utilizar
+ TIDmax = 3    ! Numero de procesadores maximo a utilizar
  
  
  
@@ -745,16 +746,19 @@ end do
 		if (CH4_in(i,j) > 15000) then
             write (16,*) "CH4_in(", i, ",",j, ") =", CH4_in(i, j) , filename, iano,diaj,ihora,"Corregido, vecinos"
    			CH4_in(i,j) = (CH4_in(i+1,j)+CH4_in(i,j+1)+CH4_in(i-1,j)+CH4_in(i,j-1))/4.
-        else if (CH4_in(i, j) > 10000) then
+   			if (CH4_in(i, j) > 7000) CH4_in(i,j) = 7000
+        else if (CH4_in(i, j) > 7000) then
             write (16,*) "CH4_in(", i, ",", j, ") =", CH4_in(i, j), filename, iano,diaj,ihora,"Corregido"
-   			CH4_in(i,j) = 10000
+   			CH4_in(i,j) = 7000
         end if
-        if (CH4_in(j, i) < -10000 ) then
+        if (CH4_in(j, i) < -7000 ) then
 			write (16,*) "CH4_in(", i, ",", j, ") =", CH4_in(i, j), filename, iano,diaj,ihora,"Pixel malo"
-			If (CH4_in(i+1,j) > -10000 .and. CH4_in(i,j+1) > -10000 .and. CH4_in(i-1,j) > -10000 .and. CH4_in(i,j-1)> -10000) Then
-				CH4_in(i,j) = (CH4_in(i+1,j)+CH4_in(i,j+1)+CH4_in(i-1,j)+CH4_in(i,j-1))/4.        
+			If (CH4_in(i+1,j) > -7000 .and. CH4_in(i,j+1) > -7000 .and. CH4_in(i-1,j) > -7000 .and. CH4_in(i,j-1)> -7000) Then
+				CH4_in(i,j) = (CH4_in(i+1,j)+CH4_in(i,j+1)+CH4_in(i-1,j)+CH4_in(i,j-1))/4.   
+				if (CH4_in(i, j) < -7000) CH4_in(i,j) = -7000     
 			Else
 				CH4_in(i,j) = (CH4_in(i+1,j)+CH4_in(i-1,j))/2.
+				if (CH4_in(i, j) < -7000) CH4_in(i,j) = -7000
 			End If
         end if
     end do
