@@ -309,7 +309,7 @@ filenamepathin = trim(pathin)//trim(filename)
  call diajuliano (idia, imes, iano, diaj)   ! entrada de reales en ves de enteros.
  call sunae(iano,diaj,ihora, latit, longit,az,el,ha,dec,soldst)  
 
- if (el < 7.0) then
+ if (el < 5.0) then !! Cambiado a 5º
     write (*,*) '   ',cdia,'  ', hora,':', minu, '        Imagen eliminada, nocturna. ', el
     write (16,*) '                                   ', trim(filename),'   Eliminada, nocturna. '
     noct = noct +1
