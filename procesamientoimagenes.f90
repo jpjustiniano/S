@@ -10,6 +10,7 @@
 ! Problemas con maximos y minimos en meses que hay una sola imagen
 ! Eliminar maximos
 ! Mejoras a Correxion de pixeles
+! Coordenadas de primeras 4 lineas estan malas
 
 !Canal 1: [1728, 9020]
 !Canal 4: [432, 2255]
@@ -266,11 +267,11 @@ filenamepathin = trim(pathin)//trim(filename)
 	call check( nf90_close(ncid) )
 	
 	call date_and_time(DATE=fecha, VALUES=tiempof)
-    write (*,200) tiempof(5) - tiempo(5), tiempof(6) - tiempo (6), tiempof(7) - tiempo(7)
+    write (*,200)  tiempof(6) - tiempo (6), tiempof(7) - tiempo(7)
 	write (*,*) '    Archivos procesados: ' , rec	
 	write (*,*) ' Archivos no procesados: ' , noct, '  (nocturnos)'
 	write (*,*)
-	write (16,200) tiempof(5) - tiempo(5), tiempof(6) - tiempo (6), tiempof(7) - tiempo(7)
+	write (16,200) tiempof(6) - tiempo (6), tiempof(7) - tiempo(7)
 	write (16,*) ' Archivos procesados: ' , rec		
     close (16)
     
@@ -309,8 +310,8 @@ filenamepathin = trim(pathin)//trim(filename)
  call sunae(iano,diaj,ihora, latit, longit,az,el,ha,dec,soldst)  
 
  if (el < 7.0) then
-    write (*,*) '   ',cdia,'  ', hora,':', minu, " eliminada, nocturna. ", el
-    write (16,*) '                                   ', trim(filename),"   Eliminada, nocturna. "
+    write (*,*) '   ',cdia,'  ', hora,':', minu, '        Imagen eliminada, nocturna. ', el
+    write (16,*) '                                   ', trim(filename),'   Eliminada, nocturna. '
     noct = noct +1
     goto 100
  end if
@@ -323,7 +324,7 @@ filenamepathin = trim(pathin)//trim(filename)
 		call date_and_time(VALUES=tiempof)
 		write (*,*) '    Archivos procesados : ' , rec
 		write (*,*) ' Archivos no procesados : ' , noct, '  (nocturnos)'
-		write (*,200) tiempof(5) - tiempo(5), tiempof(6) - tiempo (6), tiempof(7) - tiempo(7)
+		write (*,200) tiempof(6) - tiempo (6), tiempof(7) - tiempo(7)
 	End if	
     flag1 = .true.
     filename_out = ano//mes//'.media_hora.nc'
@@ -550,8 +551,8 @@ filenamepathin = trim(pathin)//trim(filename)
  status = nf90_inq_varid (ncid_in, "scatter_phase", scatter_phase_varid)
  if(status /= nf90_noerr) then
 	SP = SP_month
-	print *, 'Imagen sin variable de Scatter Phase.', filename
-	write (16,*) 'Imagen sin variable de Scatter Phase.', filename
+	print *, '                   Imagen sin variable de Scatter Phase.     ', filename
+	write (16,*) 'Imagen sin variable de Scatter Phase.    ', filename
  else 
  	call check( nf90_get_var(ncid_in, scatter_phase_varid, scatter_phase))
  	SP = scatter_phase(r4i:r4f,:NY)
@@ -751,9 +752,11 @@ end do
             write (16,*) "CH4_in(", i, ",", j, ") =", CH4_in(i, j), filename, iano,diaj,ihora,"Corregido"
    			CH4_in(i,j) = 7000
         end if
-        if (CH4_in(j, i) < -7000 ) then
+        if (CH4_in(i, j) < -7000 ) then
 			write (16,*) "CH4_in(", i, ",", j, ") =", CH4_in(i, j), filename, iano,diaj,ihora,"Pixel malo"
-			If (CH4_in(i+1,j) > -7000 .and. CH4_in(i,j+1) > -7000 .and. CH4_in(i-1,j) > -7000 .and. CH4_in(i,j-1)> -7000) Then
+			If (i==1 .or. i==NX .or. j==1 .or. j==Ny) then
+				CH4_in(i,j) = 0. ! Poner tag de error
+			else If (CH4_in(i+1,j) > -7000 .and. CH4_in(i,j+1) > -7000 .and. CH4_in(i-1,j) > -7000 .and. CH4_in(i,j-1)> -7000) Then
 				CH4_in(i,j) = (CH4_in(i+1,j)+CH4_in(i,j+1)+CH4_in(i-1,j)+CH4_in(i,j-1))/4.   
 				if (CH4_in(i, j) < -7000) CH4_in(i,j) = -7000     
 			Else
@@ -777,7 +780,7 @@ end do
  
  Go to 100
  
-200 Format ('   Tiempo procesamiento: ',I3' hr., ',I3 'min., ',I3, 'sec.')
+200 Format ('   Tiempo procesamiento: ',I3 'min., ',I3, 'sec.')
 
  
  999 Stop

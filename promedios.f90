@@ -384,7 +384,7 @@ Program ProcesamientoImagenes_media_hora
 	tiempoa = tiempof
  End do
 call date_and_time(DATE=fecha, VALUES=tiempof)
-print *, 'Tiempo Total:'
+print *, '   Terminado exitoso de la interpolacion!!'
 write (*,200) tiempof(5) - tiempo(5) ,tiempof(6)- tiempo(6),tiempof(7) - tiempo(7)
 print *
 

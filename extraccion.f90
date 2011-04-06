@@ -41,104 +41,145 @@ program extraccion
   
  call get_command_argument(1, argument)
  largofilein=len_trim(argument)
- If ( argument(largofilein-6: largofilein) /= '.prom.nc') then
+ 
+ If ( argument(largofilein-6: largofilein) /= '.prom.nc' .or. argument(largofilein-6: largofilein) /= '.rad.nc'  ) then
 	Write (*,*) '  Archivo de entrada no es base de datos de radiacion, Continuar ??', argument(largofilein-6: largofilein)
 	Read  (*,*)
- End if
+ end if
+	 
  
- call check( nf90_open(argument, nf90_nowrite, ncid) )
+ If ( argument(largofilein-7: largofilein) == '.rad.nc') then
+	print *, ' Base de datos no interpolada'
+	
+	call check( nf90_open(argument, nf90_nowrite, ncid) )
+	
+	call check( nf90_inq_dimid(ncid, "xf", xf_dimid) )
+	call check( nf90_inq_dimid(ncid, "yf", yf_dimid) )
+	call check( nf90_inq_dimid(ncid, "hora", hora_dimid) )
 
- call check( nf90_inq_varid(ncid, "hora", hora_varid) )
- call check( nf90_inq_varid(ncid, "Lat_CH1", Lat_CH1_varid) )
- call check( nf90_inq_varid(ncid, "Lon_CH1", Lon_CH1_varid) )
- call check( nf90_inq_varid(ncid, "Global_hor", Global_varid) )
- call check( nf90_inq_varid(ncid, "Directa_hor", Directa_varid) )
+	call check( nf90_inq_varid(ncid, "hora", hora_varid) )
+	call check( nf90_inq_varid(ncid, "Lat_CH1", Lat_CH1_varid) )
+	call check( nf90_inq_varid(ncid, "Lon_CH1", Lon_CH1_varid) )
+	call check( nf90_inq_varid(ncid, "Global", Global_varid) )
+	call check( nf90_inq_varid(ncid, "Directa", Directa_varid) )
 
- call check( nf90_inq_dimid(ncid, "xf", xf_dimid) )
- call check( nf90_inq_dimid(ncid, "yf", yf_dimid) )
- call check( nf90_inq_dimid(ncid, "hora", hora_dimid) )
- call check( nf90_inq_dimid(ncid, "dia", dia_dimid) )
- 
- call check( nf90_inquire_dimension(ncid, xf_dimid, len = NXf) )
- call check( nf90_inquire_dimension(ncid, yf_dimid, len = NYf) )
- call check( nf90_inquire_dimension(ncid, hora_dimid, len = Nhora) )
- call check( nf90_inquire_dimension(ncid, dia_dimid, len = Ndias) )
+	call check( nf90_inquire_dimension(ncid, xf_dimid, len = NXf) )
+	call check( nf90_inquire_dimension(ncid, yf_dimid, len = NYf) )
+	call check( nf90_inquire_dimension(ncid, hora_dimid, len = Nhora) )
 
- call check( nf90_get_att(ncid, NF90_GLOBAL, "ano", ano))
- call check( nf90_get_att(ncid, NF90_GLOBAL, "mes", mes))
- call check( nf90_get_att(ncid, NF90_GLOBAL, "horaini", horaini))
- call check( nf90_get_att(ncid, NF90_GLOBAL, "horasdia", horasdia))
- call check( nf90_get_att(ncid, NF90_GLOBAL, "diasmes", diasmes))
+	call check( nf90_get_att(ncid, NF90_GLOBAL, "ano", ano))
+	call check( nf90_get_att(ncid, NF90_GLOBAL, "mes", mes))
+	 
+	call check( nf90_get_att(ncid, Global_varid, "scale_factor", Globfact))
+	call check( nf90_get_att(ncid, Directa_varid, "scale_factor", Dirfact))
+	call check( nf90_get_att(ncid, Lat_CH1_varid, "scale_factor", Latfact)) 
+	call check( nf90_get_att(ncid, Lon_CH1_varid, "scale_factor", Lonfact)) 
+	 
+	! allocate variables
+	allocate (hora(Nhora))
+	allocate (Lat_CH1 (NXf,NYf))       
+	allocate (Lon_CH1 (NXf,NYf))
+	!allocate (Global ( Nhora, Ndias)) Cambiar dimensiones
+	!allocate (Directa ( Nhora, Ndias))
+	!allocate (Difusa ( Nhora, Ndias))
+	!allocate (DNI  ( Nhora, Ndias))
+	 
+	 
+	 
+	call check( nf90_get_var(ncid, hora_varid, hora) )
+	call check( nf90_get_var(ncid, Lat_CH1_varid, Lat_CH1) )
+	call check( nf90_get_var(ncid, Lon_CH1_varid, Lon_CH1) )
+	
+	
+	
+ else ! Prom.
  
- call check( nf90_get_att(ncid, Global_varid, "scale_factor", Globfact))
- call check( nf90_get_att(ncid, Directa_varid, "scale_factor", Dirfact))
- call check( nf90_get_att(ncid, Lat_CH1_varid, "scale_factor", Latfact)) 
- call check( nf90_get_att(ncid, Lon_CH1_varid, "scale_factor", Lonfact)) 
- 
- ! allocate variables
- allocate (hora(Nhora))
- allocate (Lat_CH1 (NXf,NYf))       
- allocate (Lon_CH1 (NXf,NYf))
- allocate (Global ( Nhora, Ndias))
- allocate (Directa ( Nhora, Ndias))
- allocate (Difusa ( Nhora, Ndias))
- allocate (DNI  ( Nhora, Ndias))
- 
- 
- 
- call check( nf90_get_var(ncid, hora_varid, hora) )
- call check( nf90_get_var(ncid, Lat_CH1_varid, Lat_CH1) )
- call check( nf90_get_var(ncid, Lon_CH1_varid, Lon_CH1) )
- 
- Write (*,*) 'Latitud y longitud de punto a extraer datos: (grados decimales) '
- read (*,*) Lat, Lon
- 
- iLat = nint(-100. * abs(Lat)); iLon = nint(-100. * abs(Lon)) ! -100 = -1/Latfact
- i=0; j=0
- Do 
-	i=i+1
-	If (Lat_CH1(i,1)<iLat) Then
-		If (abs(Lat_CH1(i,1)-iLat)>abs(Lat_CH1(i-1,1)-iLat) i= i-1
-		Do 
-			j = j+1
-			If (Lon_CH1(i,j)<iLon) Then
-				If (abs(Lon_CH1(i,j)-iLon)>abs(Lon_CH1(i,j-1)-iLon) j= j-1
+	print *, ' Base de datos ajustada a medias horas'
+
+	call check( nf90_open(argument, nf90_nowrite, ncid) )
+
+	call check( nf90_inq_varid(ncid, "hora", hora_varid) )
+	call check( nf90_inq_varid(ncid, "Lat_CH1", Lat_CH1_varid) )
+	call check( nf90_inq_varid(ncid, "Lon_CH1", Lon_CH1_varid) )
+	call check( nf90_inq_varid(ncid, "Global_hor", Global_varid) )
+	call check( nf90_inq_varid(ncid, "Directa_hor", Directa_varid) )
+	call check( nf90_inq_dimid(ncid, "xf", xf_dimid) )
+	call check( nf90_inq_dimid(ncid, "yf", yf_dimid) )
+	call check( nf90_inq_dimid(ncid, "hora", hora_dimid) )
+	call check( nf90_inq_dimid(ncid, "dia", dia_dimid) )
+	 
+	call check( nf90_inquire_dimension(ncid, xf_dimid, len = NXf) )
+	call check( nf90_inquire_dimension(ncid, yf_dimid, len = NYf) )
+	call check( nf90_inquire_dimension(ncid, hora_dimid, len = Nhora) )
+	call check( nf90_inquire_dimension(ncid, dia_dimid, len = Ndias) )
+
+	call check( nf90_get_att(ncid, NF90_GLOBAL, "ano", ano))
+	call check( nf90_get_att(ncid, NF90_GLOBAL, "mes", mes))
+	call check( nf90_get_att(ncid, NF90_GLOBAL, "horaini", horaini))
+	call check( nf90_get_att(ncid, NF90_GLOBAL, "horasdia", horasdia))
+	call check( nf90_get_att(ncid, NF90_GLOBAL, "diasmes", diasmes))
+	 
+	call check( nf90_get_att(ncid, Global_varid, "scale_factor", Globfact))
+	call check( nf90_get_att(ncid, Directa_varid, "scale_factor", Dirfact))
+	call check( nf90_get_att(ncid, Lat_CH1_varid, "scale_factor", Latfact)) 
+	call check( nf90_get_att(ncid, Lon_CH1_varid, "scale_factor", Lonfact)) 
+	 
+	! allocate variables
+	allocate (hora(Nhora))
+	allocate (Lat_CH1 (NXf,NYf))       
+	allocate (Lon_CH1 (NXf,NYf))
+	allocate (Global ( Nhora, Ndias))
+	allocate (Directa ( Nhora, Ndias))
+	allocate (Difusa ( Nhora, Ndias))
+	allocate (DNI  ( Nhora, Ndias))
+	 
+	 
+	 
+	 call check( nf90_get_var(ncid, hora_varid, hora) )
+	 call check( nf90_get_var(ncid, Lat_CH1_varid, Lat_CH1) )
+	 call check( nf90_get_var(ncid, Lon_CH1_varid, Lon_CH1) )
+	 
+	 Write (*,*) 'Latitud y longitud de punto a extraer datos: (grados decimales) '
+	 read (*,*) Lat, Lon
+	 
+	 iLat = nint(-100. * abs(Lat)); iLon = nint(-100. * abs(Lon)) ! -100 = -1/Latfact
+	 i=0; j=0
+	 Do 
+		i=i+1
+		If (Lat_CH1(i,1)<iLat) Then
+			If (abs(Lat_CH1(i,1)-iLat)>abs(Lat_CH1(i-1,1)-iLat) i= i-1
+			Do 
+				j = j+1
+				If (Lon_CH1(i,j)<iLon) Then
+					If (abs(Lon_CH1(i,j)-iLon)>abs(Lon_CH1(i,j-1)-iLon) j= j-1
+					exit
+				end if
+			 If (j> NXf) then
+				write (*,*) ' Problemas al tratar de ajustar la Longitud!!' , i,j
 				exit
-			end if
-		 If (j> NXf) then
-			write (*,*) ' Problemas al tratar de ajustar la Longitud!!' , i,j
-			exit
-		end if 	
-		end do
-		
-	end if
- If (i> NYf) then
-	write (*,*) ' Problemas al tratar de ajustar la Latitud!!' , i,j
-	exit
- end if 	
- end do
- 
- start = (/ i, j, 1, 1 /)
- count = (/ 1, 1, Nhora, Ndias /)
- ! dimids4d =  (/ xf_dimid_prom, yf_dimid_prom, hora_dimid_prom, diasmes_dimid_prom /) 
- call check( nf90_get_var (ncid, Global_varid, Global, start, count) )
- call check( nf90_get_var (ncid, Directa_varid, Directa, start, count) )
- 
- open (unit=15, file='datos.txt')
- 
- write (15,*)
- write (15,*) '   Dia	Hora		Global		Difusa		Directa		DNI'
- write (15,200)  (
+			end if 	
+			end do
+			
+		end if
+	 If (i> NYf) then
+		write (*,*) ' Problemas al tratar de ajustar la Latitud!!' , i,j
+		exit
+	 end if 	
+	 end do
+	 
+	 start = (/ i, j, 1, 1 /)
+	 count = (/ 1, 1, Nhora, Ndias /)
+	 ! dimids4d =  (/ xf_dimid_prom, yf_dimid_prom, hora_dimid_prom, diasmes_dimid_prom /) 
+	 call check( nf90_get_var (ncid, Global_varid, Global, start, count) )
+	 call check( nf90_get_var (ncid, Directa_varid, Directa, start, count) )
+	 
+	 open (unit=15, file='datos.txt')
+	 
+	 write (15,*)
+	 write (15,*) '   Dia	Hora		Global		Difusa		Directa		DNI'
+	 write (15,200)  (
 
-
-
-
-
-
-
-
-
-
+ End if
 
 200 Format ('   ',I2,'	'
 

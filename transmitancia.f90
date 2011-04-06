@@ -5,9 +5,10 @@
 ! Revisar:
 !	Revisar que pasa con pixeles en borde donde no es procesado el pixel lateral
 !	Dejar la matriz de visibilidad procesado segun altura
-!	No esta calculando los atos de la primera linea de NYf
+!	No esta calculando los datos de la primera linea de NYf
+!	Hora desfasada ...
 
-!Canal 1: [1728, 9020]
+!Canal 1: [1728, 9020] 
 !Canal 4: [432, 2255]
 
 !Imagen Media Hora:
@@ -19,6 +20,7 @@
 
  Program trasmitancia
  use netcdf
+ ! use Subs
  !$ use OMP_LIb
  implicit none
  
@@ -96,7 +98,7 @@
  ! Parametros de uso
  pathin = '/media/Elements/dm/'  ! Directorio de archivos de entrada.. NO implementado aun.
  pathout = '/media/Elements/dm/' ! Directorio de archivos de salida.. NO implementado aun
- TIDmax = 6    ! Numero de procesadores maximo a utilizar
+ TIDmax = 3    ! Numero de procesadores maximo a utilizar
  
  !$    TID = omp_get_num_procs()
  !$		If (TID>TIDmax) TID = TIDmax
@@ -366,15 +368,15 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 !	nboe = nboe+1
 !end do
  
-! allocate (nboe, 4) fboe
-! allocate (nboe) dboe
+! allocate (fboe (nboe, 4)) 
+! allocate (dboe (nboe)) 
 ! do i=1, nboe
 !  read (15,1500) fboe(i), dboe(i)
 ! end do
  
  
 !             C1  C4  SP  mes clase
-!1500 format ( I4, I4, I4, I2, I2) ! Lectura de p
+!1500 format ( F6.4, F6.2, F5.2, F2.0, I2) ! Lectura de p
 
  !/BOetto
  
@@ -495,7 +497,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		
 		read (10,*) ((cc(ii,jj), jj = 1, NYf), ii=1, NXf)
 
-!		call LDA(NXf, Nyf, Nx, Ny,nboe, CH1_in, CH4_in, SP, nint(mes), fboe, dboe, DI )
+!		call LDA(NXf, Nyf, Nx, Ny,nboe, real(CH1_in/10000.), real(CH4_in/-100.), SP/100., nint(mes), fboe, dboe, DI )
 			
 ! /Prueba datos Boetto			
 	
