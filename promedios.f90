@@ -25,7 +25,7 @@ Program ProcesamientoImagenes_media_hora
  character(25) :: filename_out
  integer :: Nhora, NXf, NYf
  integer,dimension(8) :: tiempo, tiempof, tiempoa
- integer :: TIDmax, tz
+ integer :: TIDmax, tz, DeAllocateStatus
  
  ! Suane
   REAL ::  az,el,ha,dec,soldst
@@ -300,29 +300,46 @@ Program ProcesamientoImagenes_media_hora
 	call check( nf90_get_var(ncid, Global_varid, Global, start=start, count=count))
 	call check( nf90_get_var(ncid, Directa_varid, Directa, start, count ))
 	
-	
-	rxo = horaimagenes(:,i)-(i-1)*24
+	if (size(horaimagenes(1:Nimagenesdia(i),i))/= Nimagenesdia(i)) then
+		print *, 'Deferentes tamaños de vector rxo!!!', size(horaimagenes(1:Nimagenesdia(i),i)), Nimagenesdia(i)
+		print *, 'horaimagenes(:,i)',horaimagenes(:,i)
+		print *, 'Nimagenesdia(i):',Nimagenesdia(i)
+	end if
+	rxo = horaimagenes(1:Nimagenesdia(i),i)-(i-1)*24
+
+	if (size(Global(1,1,1:Nimagenesdia(i)))/= Nimagenesdia(i)) then
+		print *, 'Deferentes tamaños de vector ryo!!!', &
+		 size(Global(1,1,Nimagen(i,1):Nimagen(i,Nimagenesdia(i)))), Nimagenesdia(i)
+		print *, ' Nimagen(i,1):',Nimagen(i,1)
+	end if
+
+
 	
 	call diajuliano (i, mes, ano, diaj)   ! entrada de reales en ves de enteros.
 
 	
-	 exter: Do lon = 1, Nxf			! Se procesa en NXxNY la matriz 3D diaria
-		inter: Do lat = 2, Nyf
-				if (Global (lon,lat, Nimagen(i,2))<0) cycle inter
-				if (Directa (lon,lat, Nimagen(i,2)) < 0) cycle inter
+	 exter: Do lon = 5, Nxf			! Se procesa en NXxNY la matriz 3D diaria
+		inter: Do lat = 5, Nyf
+				if (Global (lon,lat, 3)<0) cycle inter   !! cuidado
+				if (Directa (lon,lat, 3) < 0) cycle inter
 				
 				do k = 1, horasdia
 				call sunae (ano,diaj,xo(k),Lat_CH1(lon,lat)/100., Lon_CH1(lon,lat)/100., az,el,ha,dec,soldst)
 					Ex_h(K) = 1367.*(1+0.033*cos(360.*diaj/365.))*cos((90.-el)*cdr)
+					If (Ex_h(K)<0.) Ex_h(K)=0.
+					!print *, ano,diaj,xo(k),Lat_CH1(lon,lat)/100., Lon_CH1(lon,lat)/100., az,el,Ex_h(K)	
 				end do	
+
 				do k = 1,Nimagenesdia(i)
 				call sunae (ano,diaj,horaimagenes(k,i),Lat_CH1(lon,lat)/100., Lon_CH1(lon,lat)/100., az,el,ha,dec,soldst)
 					Eryo(K) = 1367.*(1+0.033*cos(360.*diaj/365.))*cos((90.-el)*cdr)
+					If (Eryo(K)<0.) Eryo(K)=0
+					!print *, ano,diaj,horaimagenes(k,i),Lat_CH1(lon,lat)/100., Lon_CH1(lon,lat)/100., az,el,Eryo(K)
 				end do	
 				
 				! Agregar puntos de salida y puesta del sol
 				
-				ryo = Global(lon,lat,Nimagen(i,1):Nimagen(i,Nimagenesdia(i)))
+				ryo = Global(lon,lat,1:Nimagenesdia(i))
 				where (ryo<0) ryo=0
 				!print *, Nimagen(i,1),Nimagen(i,Nimagenesdia(i)), el, ((90.-el)*cdr)
 				!print *, Global(lon,lat,Nimagen(i,1):Nimagen(i,Nimagenesdia(i)))
@@ -341,13 +358,14 @@ Program ProcesamientoImagenes_media_hora
 				!print *, 'yo:',Directa_hor(lon,lat,:)
 				
 		end do inter
+		!print *, lon
 	 end do exter
 	 
 	start_hor (4) = i
-	where (Global_hor>32700)  Global_hor=32700  	 ! Filtro de maximos
-	where (Directa_hor>32700)  Directa_hor=32700
-	call check( nf90_put_var(ncid_prom, Global_varid_prom, Global_hor, start_hor,count_hor))
-	call check( nf90_put_var(ncid_prom, Directa_varid_prom,Directa_hor,start_hor,count_hor))
+	!where (Global_hor>32700)  Global_hor=32700  	 ! Filtro de maximos
+	!where (Directa_hor>32700)  Directa_hor=32700
+	call check( nf90_put_var(ncid_prom, Global_varid_prom, Global_hor,start=start_hor,count=count_hor))
+	call check( nf90_put_var(ncid_prom, Directa_varid_prom,Directa_hor,start=start_hor,count=count_hor))
 	
  
  ! Contador imager ned med hor
@@ -358,10 +376,10 @@ Program ProcesamientoImagenes_media_hora
 	deallocate (Global_hor )
 	deallocate (Directa_hor )
 	deallocate (rxo)
-	deallocate (ryo)	
+	deallocate (ryo)
+	deallocate (Eryo)
 	call date_and_time(DATE=fecha, VALUES=tiempof)
-	print *
-	write (*,200) tiempof(5) - tiempoa(5) ,tiempof(6)- tiempoa(6),tiempof(7) - tiempoa(7)
+	write (*,300) tiempof(6)- tiempoa(6),tiempof(7) - tiempoa(7)
 	print *
 	tiempoa = tiempof
  End do
@@ -378,9 +396,10 @@ subroutine InterLinealPond ( horaini,horasdia,Nimagenesdia,rxo,ryo, Eryo, xo, Ex
 implicit none
 
 integer, intent(in) ::horaini,horasdia,Nimagenesdia
-real, dimension (:), intent(in) :: rxo, xo, Ex_h, Eryo
-integer, dimension (:), intent(in) :: ryo
-real, dimension (:), intent(out) :: yo
+real, dimension (Nimagenesdia), intent(in) :: rxo, Eryo
+real, dimension (horasdia), intent(in) ::  xo, Ex_h
+integer, dimension (Nimagenesdia), intent(in) :: ryo
+real, dimension (horasdia), intent(out) :: yo
 integer :: i = 1, j= 1
 real :: k1, k2
 
@@ -398,10 +417,11 @@ exter: do i = 1, horasdia
 			if (j>1) then 
 			 k1 = ryo(j-1)/Eryo(j-1)
 			 k2 = ryo(j)/Eryo(j)
-			 yo = (((xo(i)-rxo(j-1))/(rxo(j)-rxo(j-1)))*k1 +((rxo(j)-xo(i))/(rxo(j)-rxo(j-1)))*k2)*Ex_h(i)
+			 yo(i) = (((xo(i)-rxo(j-1))/(rxo(j)-rxo(j-1)))*k1 +((rxo(j)-xo(i))/(rxo(j)-rxo(j-1)))*k2)*Ex_h(i)
 			else 
-			 yo = (ryo(j)/Eryo(j))*Ex_h(i)
+			 yo(i) = (ryo(j)/Eryo(j))*Ex_h(i)
 			end if
+			where (yo < 0.) yo=0.
 		exit inter
 		end if 
 	end do inter
