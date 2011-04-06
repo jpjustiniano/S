@@ -490,12 +490,12 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		Else
 			write(cdia,'(I2)') NInt(dia)+1
 		End if
-		ccname=cano//cmes//cdia//chora//cmin//'.txt'
-		write (*,*) ccname, cdia,dia, chora,hora(rec), cmin
-		open (10,file=ccname, status='old', ACTION='READ', IOSTAT=errorread)
-		if (errorread/=0) cycle
+!		ccname=cano//cmes//cdia//chora//cmin//'.txt'
+!		write (*,*) ccname, cdia,dia, chora,hora(rec), cmin
+!		open (10,file=ccname, status='old', ACTION='READ', IOSTAT=errorread)
+!		if (errorread/=0) cycle
 		
-		read (10,*) ((cc(ii,jj), jj = 1, NYf), ii=1, NXf)
+!		read (10,*) ((cc(ii,jj), jj = 1, NYf), ii=1, NXf)
 
 !		call LDA(NXf, Nyf, Nx, Ny,nboe, real(CH1_in/10000.), real(CH4_in/-100.), SP/100., nint(mes), fboe, dboe, DI )
 			
