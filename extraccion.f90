@@ -17,7 +17,7 @@ program extraccion
  character(4)  :: cano
  character(2)  :: cmes
  character (40) :: argument 
- character(25) :: filename_out
+ character(40) :: filename_out
  integer :: Nhora, NXf, NYf, Ndias, iLat, iLon
  integer,dimension(8) :: tiempo, tiempof, tiempoa
  integer :: TIDmax
@@ -123,14 +123,15 @@ inter: Do
  Else
 	write(cmes,'(I2)') mes
  End if
- filename_out = cano//cmes//'datos.txt'
+ filename_out = argument(1:largofilein-3)//'.datos.txt'
  open (unit=15, file=filename_out)
+ write (15,*) '  Latitud: ',Lat,' ,  Longitud: ',Lon
  
  start = (/ i, j, 1, 1 /)	 
 	 
  If ( argument(largofilein-6: largofilein) == '.rad.nc') then
 	print *, ' Base de datos no interpolada'
-	write (15,*) ' Base de datos no interpolada ', argument
+	write (15,*) 'Base de datos no interpolada ', argument
 	
 	call check( nf90_inq_varid(ncid, "Global", Global_varid) )
 	call check( nf90_inq_varid(ncid, "Directa", Directa_varid) )
@@ -151,14 +152,14 @@ inter: Do
 	call check( nf90_get_var (ncid, Directa_varid, Directa, start, count) )	
 	
 	write (*,*) '  Año    Mes  Dia   Hora(UTC)   Global      Directa    Difusa'
-	write (15,*) '  Año    Mes  Dia   Hora(UTC)   Global      Directa    Difusa'
+	write (15,*) 'Año;Mes;Dia;Hora(UTC);Global;Directa;Difusa'
 exter2: Do i = 1 , 31
 inter2:	Do j = 1, Nhora
 			if (hora(j)> (i-1)*24 .and. hora(j) < (i)*24) then 
 				horad = mod(hora(j),24.)
 				write (*,200)  ano, mes, i, horad, Global(j,1)*Globfact, Directa(j,1)*Dirfact,&
 					(Global(j,1)- Directa(j,1))*Globfact
-				write (15,200)  ano, mes, i, horad, Global(j,1)*Globfact, Directa(j,1)*Dirfact,&
+				write (15,215)  ano, mes, i, horad, Global(j,1)*Globfact, Directa(j,1)*Dirfact,&
 					(Global(j,1)- Directa(j,1))*Globfact	
 			end if
 		end do inter2
@@ -200,13 +201,14 @@ inter2:	Do j = 1, Nhora
 	write (*,200)  ((ano, mes, j, hora(i)/10., Global(i,j)*Globfact, Directa(i,j)*Dirfact,&
 			(Global(i,j)- Directa(i,j))*Globfact, i=1,Nhora),j=1,Ndias)
 	write (15,*)
-	write (15,*) '   Año	Mes		Dia		Hora (UTC)	 Global		Directa		Difusa'
-	write (15,200)  ((ano, mes, j, hora(i)/10., Global(i,j)*Globfact, Directa(i,j)*Dirfact,&
+	write (15,*) 'Año;Mes;Dia;Hora(UTC);Global;Directa;Difusa'
+	write (15,215)  ((ano, mes, j, hora(i)/10., Global(i,j)*Globfact, Directa(i,j)*Dirfact,&
 			(Global(i,j)- Directa(i,j))*Globfact, i=1,Nhora),j=1,Ndias)		
 
  End if
 
 200 Format ('  ',I4,'  ',I2,'  ',I3,'  ',F4.1,'  ',F7.2,'  ',F7.2,'  ',F7.2)
+215 Format (I5,';',I3,';',I3,';',F5.1,';',F8.2,';',F8.2,';',F8.2)
 
  contains
  subroutine check(status)
