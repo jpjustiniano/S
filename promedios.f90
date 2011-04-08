@@ -60,7 +60,7 @@ Program ProcesamientoImagenes_media_hora
  call date_and_time(DATE=fecha, VALUES=tiempo)
  tiempoa = tiempo
 
- TIDmax = 3    ! Numero de procesadores maximo a utilizar
+ TIDmax = 7    ! Numero de procesadores maximo a utilizar
  
  !$    TID = omp_get_num_procs()
  !$		If (TID>TIDmax) TID = TIDmax
@@ -215,6 +215,7 @@ Program ProcesamientoImagenes_media_hora
  
  call check( nf90_put_att(ncid_prom, hora_varid_prom, "units", "UTC_hours"))
  call check( nf90_put_att(ncid_prom, hora_varid_prom, "_CoordinateAxisType", "time"))
+ call check( nf90_put_att(ncid_prom, hora_varid_prom, "scale_factor", 0.1) )
  
  call check( nf90_put_att(ncid_prom, Global_varid_prom, "units", "W/m2") )
  call check( nf90_put_att(ncid_prom, Global_varid_prom, "missing_value", -32767) )
@@ -236,7 +237,8 @@ Program ProcesamientoImagenes_media_hora
  call check( nf90_enddef(ncid_prom) )
  
  ! / Fin creacion archivo de salida
- 
+ call check( nf90_put_var(ncid_prom, Lat_CH1_varid_prom, Lat_CH1) )
+ call check( nf90_put_var(ncid_prom, Lon_CH1_varid_prom, Lon_CH1) )
 
  allocate (Nimagenesdia(diasmes))
  allocate (Nimagen(diasmes,Nimagenesdiamax))
@@ -269,7 +271,7 @@ Program ProcesamientoImagenes_media_hora
  Do i=2,horasdia
 	xo(i)= xo(i-1)+1
  end do
- call check( nf90_put_var(ncid_prom, hora_varid_prom, xo) ) 
+ call check( nf90_put_var(ncid_prom, hora_varid_prom, xo*10) ) 
  
  start = (/ 1, 1, 1 /)
  count = (/ NXf, NYf, 1 /)
@@ -318,8 +320,8 @@ Program ProcesamientoImagenes_media_hora
 	call diajuliano (i, mes, ano, diaj)   ! entrada de reales en ves de enteros.
 
 	
-	 exter: Do lon = 5, Nxf			! Se procesa en NXxNY la matriz 3D diaria
-		inter: Do lat = 5, Nyf
+	 exter: Do lon = 1, Nxf			! Se procesa en NXxNY la matriz 3D diaria
+		inter: Do lat = 1, Nyf
 				if (Global (lon,lat, 3)<0) cycle inter   !! cuidado
 				if (Directa (lon,lat, 3) < 0) cycle inter
 				
@@ -362,8 +364,8 @@ Program ProcesamientoImagenes_media_hora
 	 end do exter
 	 
 	start_hor (4) = i
-	!where (Global_hor>32700)  Global_hor=32700  	 ! Filtro de maximos
-	!where (Directa_hor>32700)  Directa_hor=32700
+	where (Global_hor<32700)  Global_hor=32700  	 ! Filtro de maximos
+	where (Directa_hor<32700)  Directa_hor=32700
 	call check( nf90_put_var(ncid_prom, Global_varid_prom, Global_hor,start=start_hor,count=count_hor))
 	call check( nf90_put_var(ncid_prom, Directa_varid_prom,Directa_hor,start=start_hor,count=count_hor))
 	

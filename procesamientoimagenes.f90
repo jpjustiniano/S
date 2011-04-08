@@ -99,7 +99,7 @@
  ! Parametros de uso
  pathin = '/media/Elements/dm/'  ! Directorio de archivos de entrada.. NO incorporado aun.
  pathout = '/media/Elements/dm/' ! Directorio de archivos de salida.. NO incorporado aun
- TIDmax = 3    ! Numero de procesadores maximo a utilizar
+ TIDmax = 7    ! Numero de procesadores maximo a utilizar
  
  
  

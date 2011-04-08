@@ -7,6 +7,7 @@
 !	Dejar la matriz de visibilidad procesado segun altura
 !	No esta calculando los datos de la primera linea de NYf
 !	Hora desfasada ...
+!	Revisar subrutinas de posicion solar	
 
 !Canal 1: [1728, 9020] 
 !Canal 4: [432, 2255]
@@ -25,7 +26,7 @@
  implicit none
  
  ! Variables Programa
- integer :: i, j, rec, ii,jj, errorread
+ integer :: i=1, j, rec, ii,jj, errorread
  real ano, mes, diaj, dia 
  Real horad
  character (30) :: argument  ! Nombre de archivo 
@@ -98,7 +99,7 @@
  ! Parametros de uso
  pathin = '/media/Elements/dm/'  ! Directorio de archivos de entrada.. NO implementado aun.
  pathout = '/media/Elements/dm/' ! Directorio de archivos de salida.. NO implementado aun
- TIDmax = 3    ! Numero de procesadores maximo a utilizar
+ TIDmax = 7    ! Numero de procesadores maximo a utilizar
  
  !$    TID = omp_get_num_procs()
  !$		If (TID>TIDmax) TID = TIDmax
@@ -388,8 +389,9 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 
 	print *,'rec: ',rec
 	
-	dia = int(hora(rec)/24)
+	dia = int(hora(rec)/24) !! Dias que ya han pasado
 	horad = hora(rec)- dia*24
+	dia = dia + 1 			!! Dia actual 
 
 	call diajuliano (dia, mes, ano, diaj) 
 	
@@ -507,7 +509,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		
 		! subroutine ASTRO - calculation of eccentricity correction, declination an equation of time
 		! input: JDAY ; output: E0,DEC,ET
-		CALL ASTRO(diaj,E0,DEC,ET) 
+		CALL ASTRO(diaj,E0,DEC,ET) 			!!  validar!! Da angulos menores que subrutina, produce imagenes sin rad!!
 		
 		DECR = DEC*cdr
 		YLATR= Lat_CH1(NXf/2,j)/100.*cdr 		! Optimizacion, Uso de latitud media.
@@ -519,7 +521,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 
 		!calculate time correction
 		ZN = 0.0
-		TIMCOR = (4.0*(15.0*ZN+Lon_CH1(i,j)/100.)+ET)/60.0
+		TIMCOR = (4.0*(15.0*ZN+Lon_CH1(NXf/2,j)/100.)+ET)/60.0		!! Aprox de Lon.!
 		TSOLAR = horad+TIMCOR    !para entrada con horario en UTC
 		
 		! Characteristic hour angle WI corresponding to the W1-W2 interval
