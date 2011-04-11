@@ -1,25 +1,28 @@
 Program coordenadas
 
 integer, parameter :: NLat= 1330, Nlon= 2565
-integer, parameter :: r4i = 1137, r4f = 1441 , r1i = r4i*4, r1f = r4f*4 ! CH1: 4380 a 5472
-integer, parameter :: NX = (r4f- r4i)+1, NY = 479 
+integer, parameter :: r4i = 1168, r4f = 1441 , r4t = 690, r4b = 1170
+integer, parameter :: r1i = (r4i-1)*4+1, r1f = (r4f-1)*4+1 , r1t = (r4t-1)*4+1, r1b = (r4b-1)*4+1   
+integer, parameter :: NX = (r4f- r4i)+1, NY = (r4b- r4t)+1, NXf = (r4f- r4i)*4+1, NYf = (r4b - r4t)*4+1
 integer, dimension (Nx, Ny) :: Lat_CH4 , Lon_CH4
-integer, dimension ((r4f- r4i)*4+1, (Ny-1)*4+1) :: Lat_CH1 , Lon_CH1
+integer, dimension (r1t, r1b) :: Lat_CH1 , Lon_CH1
 integer, dimension (Nlon,NLat) :: Latitud , Longitud
-Integer :: L1, L2
+Integer :: L1, L2, errorread
 Real :: mm
 
- open (unit=12, file='latitude.CH4.south_full.txt', status= 'old', Action='read' )
+ open (unit=12, file='CH4.latitude.south_full.txt', status= 'old', Action='read', IOSTAT=errorread  )
+ If(errorread/=0) print *,' Error de lectura de archivo: ', '  CH4.latitude.south_full.txt'
  read (12,*) Latitud
  Close (12)
- open (unit=12, file='longitude.CH4.south_full.txt', status= 'old', Action='read' )
+ open (unit=12, file='CH4.longitude.south_full.txt', status= 'old', Action='read', IOSTAT=errorread  )
+ If(errorread/=0) print *,' Error de lectura de archivo: ', '  CH4.longitude.south_full.txt'
  read (12,*) Longitud
  Close (12)
 
  print *, 'Inicio'
 
- Lat_CH4 = Latitud(r4i:r4f,690:1168)
- Lon_CH4 = Longitud(r4i:r4f,690:1168)
+ Lat_CH4 = Latitud(r4i:r4f,r4t:r4b)
+ Lon_CH4 = Longitud(r4i:r4f,r4t:r4b)
  
 Do i = 1, Nx
 	Do j =1, Ny
@@ -83,5 +86,13 @@ End do
  write (12,*) Lon_CH1
  Close (12)
  
-
+ open (unit=12, file='latitude.CH4.south_full.txt')
+ write (12,*) Lat_CH4
+ Close (12)
+ open (unit=12, file='longitude.CH4.south_full.txt')
+ write (12,*) Lon_CH4
+ Close (12)
+ 
+ print *, 'Terminado..'
+ 
  end program 

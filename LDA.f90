@@ -92,6 +92,7 @@ real,dimension(NXf*NYf,2),intent(in) :: Xt
 real,dimension(nc,2),intent(in) :: fc
 integer,dimension(nc),intent(in) :: dc
 integer,dimension(NXf*NYf),intent(out) :: DI2
+real,dimension(NXf*NYf,4) :: D
 integer, parameter :: K=4
 integer ::  i, nn, jj, j, errorflag
 integer, dimension (:), allocatable :: ii
@@ -99,7 +100,11 @@ real, dimension (:,:), allocatable :: Xk
 real, dimension (k) :: L, P=0
 real, dimension (2,2) :: cw , ck, cw1
 real, dimension (2,k) :: xkm
+real, dimension (2,1) :: C1
+real, dimension (NXf*NYf,1) :: C2, VU
 
+VU=1.
+D=0.
 L=0.
 cw=0.
 xkm =0.
@@ -124,21 +129,29 @@ do i = 1, k
 	Ck=0
 	Do	j =1, nn
 		Ck(1,1) = Ck(1,1) + ((Xk(j,1)-Xkm(1,i))**2)
-		Ck(1,2) = Ck(1,1) + ((Xk(j,1)-Xkm(1,i))*(Xk(j,2)-Xkm(2,i)))
-		Ck(2,1) = Ck(1,1) + ((Xk(j,2)-Xkm(2,i))*(Xk(j,1)-Xkm(1,i)))
-		Ck(2,2) = Ck(2,2) + ((Xk(j,2)-Xkm(2,i))**2)
+		Ck(1,2) = Ck(1,2) + ((Xk(j,1)-Xkm(1,i))*(Xk(j,2)-Xkm(1,i)))
+		Ck(2,1) = Ck(2,1) + ((Xk(j,2)-Xkm(1,i))*(Xk(j,1)-Xkm(1,i)))
+		Ck(2,2) = Ck(2,2) + ((Xk(j,2)-Xkm(1,i))**2)
 	end do
-	Ck(1,1) = Ck(1,1)/nn
-	Ck(1,2) = Ck(1,2)/nn
-	Ck(2,1) = Ck(2,1)/nn
-	Ck(2,2) = Ck(2,2)/nn
+	Ck(1,1) = Ck(1,1)/(nn-1)
+	Ck(1,2) = Ck(1,2)/(nn-1)
+	Ck(2,1) = Ck(2,1)/(nn-1)
+	Ck(2,2) = Ck(2,2)/(nn-1)
 	
 	Cw=cw+ck*(nn-1)
-	p(i)= nn/real(nc)
+	P(i)= nn/real(nc)
 end do
 Cw = Cw/real(nc-k)
 call FINDInv(Cw, Cw1, 2, errorflag)
 if (errorflag/=0) print *, 'Error de inversion de matriz'
+
+do i= 1,k
+	C1 = Cw1*Xkm(:,i)
+	C2 = (transpose(-0.5*Xkm(:,i))*C1+Log(P(i)))*VU
+	D(:,i) = Xt*C1+C2
+end do
+
+D
 
 end subroutine LDA2
 

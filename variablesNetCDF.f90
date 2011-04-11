@@ -9,7 +9,6 @@
    integer :: ncid
    
    integer, parameter :: NDIMS = 2	      
-   !integer, parameter :: NX = 1093, NY = 1717
    integer, parameter :: r4i = 1095, r4f = 1368 , r1i = (r4i-1)*4+1, r1f = (r4f-1)*4+1 ! CH1: 4377 a 5469
    integer, parameter :: NLat= 432, Nlon= 2255
    integer, parameter :: NX=(r4f- r4i)+1, NY=430, NXf=(r4f-r4i)*4+1, NYf=(Ny-1)*4+1
