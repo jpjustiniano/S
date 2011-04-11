@@ -1,18 +1,20 @@
 Program coordenadas
 
 integer, parameter :: NLat= 432, Nlon= 2255
-integer, parameter :: r4i = 1095, r4f = 1368 , r1i = r4i*4, r1f = r4f*4 ! CH1: 4380 a 5472
+integer, parameter :: r4i = 1095, r4f = 1368 , r1i = (r4i-1)*4+1, r1f = (r4f-1)*4+1 ! CH1: 4377 a 5469
 integer, parameter :: NX = (r4f- r4i)+1, NY = 430 
 integer, dimension (Nx, Ny) :: Lat_CH4 , Lon_CH4
-integer, dimension ((r4f- r4i)*4+1, (Ny-1)*4+1) :: Lat_CH1 , Lon_CH1
+integer, dimension (NXf,NYf) :: Lat_CH1 , Lon_CH1
 integer, dimension (Nlon,NLat) :: Latitud , Longitud
-Integer :: L1, L2
+Integer :: L1, L2, errorread
 Real :: mm
 
- open (unit=12, file='latitude.media_hora.txt', status= 'old', Action='read' )
+ open (unit=12, file='latitude.CH4.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
+ If(errorread/=0) print *,' Error de lectura de archivo: ', 'latitude.CH4.media_hora.txt'
  read (12,*) Latitud
  Close (12)
- open (unit=12, file='longitude.media_hora.txt', status= 'old', Action='read' )
+ open (unit=12, file='longitude.CH4.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
+ If(errorread/=0) print *,' Error de lectura de archivo: ', 'longitude.CH4.media_hora.txt'
  read (12,*) Longitud
  Close (12)
 
@@ -22,8 +24,8 @@ Real :: mm
  print *, Latitud (1,431) , Latitud (r4i,431) , Latitud (r4f,431) , Latitud (2255,431) 
  print *, Latitud (1,432) , Latitud (r4i,432) , Latitud (r4f,432) , Latitud (2255,432) 
  
- Lat_CH4 = Latitud(r4i:r4f,:430)
- Lon_CH4 = Longitud(r4i:r4f,:430)
+ Lat_CH4 = Latitud(r4i:r4f,1:430)
+ Lon_CH4 = Longitud(r4i:r4f,1:430)
  
 Do i = 1, Nx
 	Do j =1, Ny
@@ -56,7 +58,7 @@ Do j =1, Ny
 	End do
 End do
 
-Do i =1, (r4f- r4i)*4+1
+Do i =1, NXf
 	Do j = 1, Ny-1
 		L1 =  Lat_CH1(i,(j-1)*4+1)	
 		L2 =  Lat_CH1(i,(j-1)*4+1+4)
@@ -80,15 +82,23 @@ Do i =1, (r4f- r4i)*4+1
 	End do
 End do
  
+ open (unit=12, file='latitude.CH4.txt')
+ write (12,*) Lat_CH4
+ Close (12)
+ open (unit=12, file='longitude.CH4.txt')
+ write (12,*) Lon_CH4
+ Close (12)
+ 
  open (unit=12, file='latitude.CH1.txt')
  write (12,*) Lat_CH1
  Close (12)
  open (unit=12, file='longitude.CH1.txt')
  write (12,*) Lon_CH1
- Close (12)
+ close (12)
  
-  print *
-  print *, 'CH4',Lat_CH4 (1,1) , Lat_CH4 (2,1), Lat_CH4 (Nx-1,1), Lat_CH4 (Nx,1)
+ 
+ print *
+ print *, 'CH4',Lat_CH4 (1,1) , Lat_CH4 (2,1), Lat_CH4 (Nx-1,1), Lat_CH4 (Nx,1)
  print *, Lat_CH1 (1,1) , Lat_CH1 (2,1) ,  Lat_CH1 ((Nx-1)*4+1-1,1) , Lat_CH1 ((Nx-1)*4+1,1) 
  print *, Lat_CH1 (1,2) , Lat_CH1 (2,2) ,  Lat_CH1 ((Nx-1)*4+1-1,2) , Lat_CH1 ((Nx-1)*4+1,2)  
  print *, Lat_CH1 (1,3) , Lat_CH1 (2,3) ,  Lat_CH1 ((Nx-1)*4+1-1,3) , Lat_CH1 ((Nx-1)*4+1,3)
@@ -99,8 +109,8 @@ End do
  print *, Lat_CH1(1,(Ny-1)*4+1-1),Lat_CH1 (2,(Ny-1)*4+1-1),Lat_CH1 ((Nx-1)*4+1-1,(Ny-1)*4+1-1),Lat_CH1 ((Nx-1)*4+1,(Ny-1)*4+1-1) 
  print *, Lat_CH1 (1,(Ny-1)*4+1) , Lat_CH1 (2,(Ny-1)*4+1) , Lat_CH1 ((Nx-1)*4+1,(Ny-1)*4+1) , Lat_CH1 ((Nx-1)*4+1,(Ny-1)*4+1)
  print *,'CH4', Lat_CH4 (1,Ny) , Lat_CH4 (2,Ny), Lat_CH4 (Nx-1,Ny), Lat_CH4 (Nx,Ny)
-  print *
-  print *, 'CH4',Lon_CH4 (1,1) , Lon_CH4 (2,1), Lon_CH4 (Nx-1,1), Lon_CH4 (Nx,1)
+ print *
+ print *, 'CH4',Lon_CH4 (1,1) , Lon_CH4 (2,1), Lon_CH4 (Nx-1,1), Lon_CH4 (Nx,1)
  print *, Lon_CH1 (1,1) , Lon_CH1 (2,1) ,  Lon_CH1 ((Nx-1)*4+1-1,1) , Lon_CH1 ((Nx-1)*4+1,1) 
  print *, Lon_CH1 (1,2) , Lon_CH1 (2,2) ,  Lon_CH1 ((Nx-1)*4+1-1,2) , Lon_CH1 ((Nx-1)*4+1,2)  
  print *, Lon_CH1 (1,3) , Lon_CH1 (2,3) ,  Lon_CH1 ((Nx-1)*4+1-1,3) , Lon_CH1 ((Nx-1)*4+1,3) 
@@ -110,5 +120,6 @@ End do
  print *,Lon_CH1(1,(Ny-1)*4+1-2),Lon_CH1 (2,(Ny-1)*4+1-2),Lon_CH1((Nx-1)*4+1-1,(Ny-1)*4+1-2),Lon_CH1((Nx-1)*4+1,(Ny-1)*4+1-2)
  print *,Lon_CH1(1,(Ny-1)*4+1-1),Lon_CH1 (2,(Ny-1)*4+1-1),Lon_CH1((Nx-1)*4+1-1,(Ny-1)*4+1-1),Lon_CH1 ((Nx-1)*4+1,(Ny-1)*4+1-1) 
  print *, Lon_CH1 (1, (Ny-1)*4+1) , Lon_CH1 (2, (Ny-1)*4+1),Lon_CH1 ((Nx-1)*4+1,(Ny-1)*4+1),Lon_CH1 ((Nx-1)*4+1, (Ny-1)*4+1)
-  print *, 'CH4',Lon_CH4 (1,Ny) , Lon_CH4 (2,Ny), Lon_CH4 (Nx-1,Ny), Lon_CH4 (Nx,Ny)
- end program 
+ print *, 'CH4',Lon_CH4 (1,Ny) , Lon_CH4 (2,Ny), Lon_CH4 (Nx-1,Ny), Lon_CH4 (Nx,Ny)
+  
+end program 
