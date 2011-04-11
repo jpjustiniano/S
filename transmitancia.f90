@@ -82,8 +82,7 @@
  integer:: TID, TIDmax
 
  ! Variables Brasil
- Real(8) :: E0,DEC,ET
- Real(8) :: DECR, YLATR, CODEC, COLAT, SIDEC, SILAT
+ Real(8) :: E0,DEC,ET, YLATR
  Real(8) :: ZN, TIMCOR, ROFF, TOP, CLOLWC
  Real(8) :: TS, TSOLAR, WSOLAR, COWI, COSZEN, THETA
  Real(8) :: T1SFC = 300.0, T2SFC = 294.0, T4SFC = 287.0, T3SFC = 272.2, T5SFC = 257.1
@@ -511,29 +510,23 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		! input: JDAY ; output: E0,DEC,ET
 		CALL ASTRO(diaj,E0,DEC,ET) 			!!  validar!! Da angulos menores que subrutina, produce imagenes sin rad!!
 		
-		DECR = DEC*cdr
 		YLATR= Lat_CH1(NXf/2,j)/100.*cdr 		! Optimizacion, Uso de latitud media.
-		CODEC = cos(DECR)
-		COLAT = cos(YLATR)
-		SIDEC = sin(DECR)
-		SILAT = sin(YLATR)
-       
 
 		!calculate time correction
 		ZN = 0.0
 		TIMCOR = (4.0*(15.0*ZN+Lon_CH1(NXf/2,j)/100.)+ET)/60.0		!! Aprox de Lon.!
-		TSOLAR = horad+TIMCOR    !para entrada con horario en UTC
+		TSOLAR = horad+TIMCOR    !para entrada con horario en UTC 
 		
 		! Characteristic hour angle WI corresponding to the W1-W2 interval
 		WSOLAR    = (12.00 - TSOLAR)*15.
 		COWI  = COS(WSOLAR*CDR)		
 		! Characteristic solar zenith angle THETA (o)
-		COSZEN = SIDEC*SILAT + CODEC*COLAT*COWI
+		COSZEN = sin(DEC*cdr)*sin(YLATR) + cos(DEC*cdr)*cos(YLATR)*COWI
 		THETA  = ACOS(COSZEN)/CDR
 		XI0   = 1367.00*E0*COSZEN
 
 		
-!$omp parallel private(XIM,Tempt,Altt,HRt,Albedot,Vist,Latmos,TS,TIMCOR,TSOLAR,WSOLAR,COWI,&
+!$omp parallel private(XIM,Tempt,Altt,HRt,Albedot,Vist,Latmos,TS, & ! TIMCOR,TSOLAR,WSOLAR,COWI,
 !$omp			& Dir,Glob,TCLEARn,TDIRn,TCLOUDn)
 !$omp do
 		Do i=1, NXf 	
@@ -642,10 +635,10 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			Directa(i,j) = NInt(Dir*10)
 			Global(i,j)  = NInt(Glob*10)			
 			
-			Else  ! Si esta fuera de territorio Chileno.
-				Directa(i,j) = -1.0
-				Global(i,j)  = -1.0
-111			End if  ! Fin de procesamiento de pixel con altura > 0.
+		  Else  ! Si esta fuera de territorio Chileno.
+			Directa(i,j) = -1.0
+			Global(i,j)  = -1.0
+111		  End if  ! Fin de procesamiento de pixel con altura > 0.
 		
 		End do
 		!$omp end do 
