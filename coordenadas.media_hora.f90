@@ -1,3 +1,6 @@
+! Copyright (C) 2011, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
+! Programa para la extraccion e interpolacion de coordenadas a partor de la latitud y longitud de CH4
+
 Program coordenadas
 implicit none
  
