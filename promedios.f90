@@ -364,8 +364,8 @@ Program ProcesamientoImagenes_media_hora
 	 end do exter
 	 
 	start_hor (4) = i
-	where (Global_hor<32700)  Global_hor=32700  	 ! Filtro de maximos
-	where (Directa_hor<32700)  Directa_hor=32700
+	where (Global_hor > 32700)  Global_hor=32700  	 ! Filtro de maximos
+	where (Directa_hor > 32700)  Directa_hor=32700
 	call check( nf90_put_var(ncid_prom, Global_varid_prom, Global_hor,start=start_hor,count=count_hor))
 	call check( nf90_put_var(ncid_prom, Directa_varid_prom,Directa_hor,start=start_hor,count=count_hor))
 	
