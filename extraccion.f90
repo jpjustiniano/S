@@ -11,17 +11,17 @@ program extraccion
  integer, parameter :: Nimagenesdiamin = 5
  integer, parameter :: Nimagenesdiamax = 26 
  integer :: horaf, horaini, horasdia, diasmes
- integer :: largofilein, lat, lon, i , j, k
+ integer :: largofilein, i , j, k
  integer :: ano, mes
  character(8)  :: fecha
  character(4)  :: cano
  character(2)  :: cmes
  character (40) :: argument 
- character(40) :: filename_out
+ character(60) :: filename_out
  integer :: Nhora, NXf, NYf, Ndias, iLat, iLon
  integer,dimension(8) :: tiempo, tiempof, tiempoa
  integer :: TIDmax
- real :: Globfact, Dirfact, Latfact, Lonfact, horad
+ real :: Globfact, Dirfact, Latfact, Lonfact, horad, lat, lon
  
  integer, dimension(:,:), allocatable :: Nimagen, Lat_CH1, Lon_CH1
  integer, dimension(:,:), allocatable :: Global, Directa, Difusa, DNI

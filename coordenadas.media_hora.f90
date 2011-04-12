@@ -1,12 +1,13 @@
 Program coordenadas
-
+implicit none
+ 
 integer, parameter :: NLat= 432, Nlon= 2255
 integer, parameter :: r4i = 1095, r4f = 1368 , r1i = (r4i-1)*4+1, r1f = (r4f-1)*4+1 ! CH1: 4377 a 5469
 integer, parameter :: NX = (r4f- r4i)+1, NY = 430 , NXf = (r4f- r4i)*4+1, NYf = (Ny-1)*4+1
 integer, dimension (Nx, Ny) :: Lat_CH4 , Lon_CH4
 integer, dimension (NXf,NYf) :: Lat_CH1 , Lon_CH1
 integer, dimension (Nlon,NLat) :: Latitud , Longitud
-Integer :: L1, L2, errorread
+Integer :: L1, L2, errorread, i, j, k
 Real :: mm
 
  open (unit=12, file='CH4.latitude.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
@@ -92,31 +93,13 @@ End do
  write (12,*) Lon_CH1
  close (12)
  
+ print *
+ print *,  'Max Lat_CH4: ',maxval(Lat_CH4),'  Min Lat_CH4:',minval(Lat_CH4)
+ print *,  'Max Lat_CH1: ',maxval(Lat_CH1),'  Min Lat_CH1:',minval(Lat_CH1)
+ print * 
+ print *,  'Max Lon_CH4: ',maxval(Lon_CH4),'  Min Lon_CH4:',minval(Lon_CH4)
+ print *,  'Max Lon_CH1: ',maxval(Lon_CH1),'  Min Lon_CH1:',minval(Lon_CH1)
+ print * 
  print *, 'Terminado..'
- 
-! print *
-! print *, 'CH4',Lat_CH4 (1,1) , Lat_CH4 (2,1), Lat_CH4 (Nx-1,1), Lat_CH4 (Nx,1)
-! print *, Lat_CH1 (1,1) , Lat_CH1 (2,1) ,  Lat_CH1 ((Nx-1)*4+1-1,1) , Lat_CH1 ((Nx-1)*4+1,1) 
-! print *, Lat_CH1 (1,2) , Lat_CH1 (2,2) ,  Lat_CH1 ((Nx-1)*4+1-1,2) , Lat_CH1 ((Nx-1)*4+1,2)  
-! print *, Lat_CH1 (1,3) , Lat_CH1 (2,3) ,  Lat_CH1 ((Nx-1)*4+1-1,3) , Lat_CH1 ((Nx-1)*4+1,3)
-! print *, Lat_CH1 (1,4) , Lat_CH1 (2,4) ,  Lat_CH1 ((Nx-1)*4+1-1,4) , Lat_CH1 ((Nx-1)*4+1,4) 
-! print *, 'CH4',Lat_CH4 (1,2) , Lat_CH4 (2,2), Lat_CH4 (Nx-1,2), Lat_CH4 (Nx,2) 
-! print *,'CH4', Lat_CH4 (1,Ny-1) , Lat_CH4 (2,Ny-1), Lat_CH4 (Nx-1,Ny-1), Lat_CH4 (Nx,Ny-1)
-! print *, Lat_CH1(1,(Ny-1)*4+1-2),Lat_CH1 (2,(Ny-1)*4+1-2),Lat_CH1 ((Nx-1)*4+1-1,(Ny-1)*4+1-2),Lat_CH1 ((Nx-1)*4+1,(Ny-1)*4+1-2)
-! print *, Lat_CH1(1,(Ny-1)*4+1-1),Lat_CH1 (2,(Ny-1)*4+1-1),Lat_CH1 ((Nx-1)*4+1-1,(Ny-1)*4+1-1),Lat_CH1 ((Nx-1)*4+1,(Ny-1)*4+1-1) 
-! print *, Lat_CH1 (1,(Ny-1)*4+1) , Lat_CH1 (2,(Ny-1)*4+1) , Lat_CH1 ((Nx-1)*4+1,(Ny-1)*4+1) , Lat_CH1 ((Nx-1)*4+1,(Ny-1)*4+1)
-! print *,'CH4', Lat_CH4 (1,Ny) , Lat_CH4 (2,Ny), Lat_CH4 (Nx-1,Ny), Lat_CH4 (Nx,Ny)
-! print *
-! print *, 'CH4',Lon_CH4 (1,1) , Lon_CH4 (2,1), Lon_CH4 (Nx-1,1), Lon_CH4 (Nx,1)
-! print *, Lon_CH1 (1,1) , Lon_CH1 (2,1) ,  Lon_CH1 ((Nx-1)*4+1-1,1) , Lon_CH1 ((Nx-1)*4+1,1) 
-! print *, Lon_CH1 (1,2) , Lon_CH1 (2,2) ,  Lon_CH1 ((Nx-1)*4+1-1,2) , Lon_CH1 ((Nx-1)*4+1,2)  
-! print *, Lon_CH1 (1,3) , Lon_CH1 (2,3) ,  Lon_CH1 ((Nx-1)*4+1-1,3) , Lon_CH1 ((Nx-1)*4+1,3) 
-! print *, Lon_CH1 (1,4) , Lon_CH1 (2,4) ,  Lon_CH1 ((Nx-1)*4+1-1,4) , Lon_CH1 ((Nx-1)*4+1,4) 
-! print *, 'CH4',Lon_CH4 (1,2) , Lon_CH4 (2,2), Lon_CH4 (Nx-1,2), Lon_CH4 (Nx,2)
-! print *, 'CH4',Lon_CH4 (1,Ny-1) , Lon_CH4 (2,Ny-1), Lon_CH4 (Nx-1,Ny-1), Lon_CH4 (Nx,Ny-1)
-! print *,Lon_CH1(1,(Ny-1)*4+1-2),Lon_CH1 (2,(Ny-1)*4+1-2),Lon_CH1((Nx-1)*4+1-1,(Ny-1)*4+1-2),Lon_CH1((Nx-1)*4+1,(Ny-1)*4+1-2)
-! print *,Lon_CH1(1,(Ny-1)*4+1-1),Lon_CH1 (2,(Ny-1)*4+1-1),Lon_CH1((Nx-1)*4+1-1,(Ny-1)*4+1-1),Lon_CH1 ((Nx-1)*4+1,(Ny-1)*4+1-1) 
-! print *, Lon_CH1 (1, (Ny-1)*4+1) , Lon_CH1 (2, (Ny-1)*4+1),Lon_CH1 ((Nx-1)*4+1,(Ny-1)*4+1),Lon_CH1 ((Nx-1)*4+1, (Ny-1)*4+1)
-! print *, 'CH4',Lon_CH4 (1,Ny) , Lon_CH4 (2,Ny), Lon_CH4 (Nx-1,Ny), Lon_CH4 (Nx,Ny)
-  
+
 end program 

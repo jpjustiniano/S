@@ -1,13 +1,14 @@
 Program coordenadas
+implicit none
 
 integer, parameter :: NLat= 1330, Nlon= 2565
 integer, parameter :: r4i = 1168, r4f = 1441 , r4t = 690, r4b = 1170
-integer, parameter :: r1i = (r4i-1)*4+1, r1f = (r4f-1)*4+1 , r1t = (r4t-1)*4+1, r1b = (r4b-1)*4+1   
+integer, parameter :: r1i = (r4i-1)*4+1, r1f = (r4f-1)*4+1 , r1t = (r4t-1)*4+1, r1b = (r4b-1)*4+1    ! CH1: 4669 a 5761
 integer, parameter :: NX = (r4f- r4i)+1, NY = (r4b- r4t)+1, NXf = (r4f- r4i)*4+1, NYf = (r4b - r4t)*4+1
 integer, dimension (Nx, Ny) :: Lat_CH4 , Lon_CH4
-integer, dimension (r1t, r1b) :: Lat_CH1 , Lon_CH1
+integer, dimension (Nxf, Nyf) :: Lat_CH1 , Lon_CH1
 integer, dimension (Nlon,NLat) :: Latitud , Longitud
-Integer :: L1, L2, errorread
+Integer :: L1, L2, errorread, i, j, k
 Real :: mm
 
  open (unit=12, file='CH4.latitude.south_full.txt', status= 'old', Action='read', IOSTAT=errorread  )
@@ -55,7 +56,7 @@ Do j =1, Ny
 	End do
 End do
 
-Do i =1, (r4f- r4i)*4+1
+Do i =1, NXf
 	Do j = 1, Ny-1
 		L1 =  Lat_CH1(i,(j-1)*4+1)	
 		L2 =  Lat_CH1(i,(j-1)*4+1+4)
@@ -93,6 +94,13 @@ End do
  write (12,*) Lon_CH4
  Close (12)
  
+ print *
+ print *,  'Max Lat_CH4: ',maxval(Lat_CH4),'  Min Lat_CH4:',minval(Lat_CH4)
+ print *,  'Max Lat_CH1: ',maxval(Lat_CH1),'  Min Lat_CH1:',minval(Lat_CH1)
+ print * 
+ print *,  'Max Lon_CH4: ',maxval(Lon_CH4),'  Min Lon_CH4:',minval(Lon_CH4)
+ print *,  'Max Lon_CH1: ',maxval(Lon_CH1),'  Min Lon_CH1:',minval(Lon_CH1)
+ print * 
  print *, 'Terminado..'
  
- end program 
+end program 
