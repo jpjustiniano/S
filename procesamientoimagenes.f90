@@ -24,7 +24,7 @@
 
  Program ProcesamientoImagenes_media_hora
  use netcdf
- !$ use OMP_LIb
+ 
  implicit none
  
  real :: latit = -33., longit = -70.
@@ -53,6 +53,10 @@
  integer, dimension (Nlon,NLat) :: Latitud , Longitud, scatter_phase
  Integer :: L1, L2, TID, TIDmax
  Real :: mm
+ !Variables Boetto
+ integer, dimension(:,:), allocatable :: fboe
+ integer, dimension(:), allocatable :: dboe
+ integer :: nboe
  
  ! Variables NETCDF 
  integer :: ncid, ncid_in, dia =31, status
@@ -97,7 +101,7 @@
 !********************************************************** Fin declaracion Variables
  
  ! Parametros de uso
- pathin = '/media/Elements/dm/'  ! Directorio de archivos de entrada.. NO incorporado aun.
+ pathin = '/media/Elements/dm/'  ! Directorio de archivos de entrada.. 
  pathout = '/media/Elements/dm/' ! Directorio de archivos de salida.. NO incorporado aun
  TIDmax = 7    ! Numero de procesadores maximo a utilizar
  
@@ -119,16 +123,16 @@
  open (unit=16, file='log.txt')
 
 ! Matrices de Geolocalizacion y scatter phase
- open (unit=12, file='latitude.CH4.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
- If(errorread/=0) print *,' Error de lectura de archivo: ', 'latitude.CH4.media_hora.txt'
+ open (unit=12, file='CH4.latitude.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
+ If(errorread/=0) print *,' Error de lectura de archivo: ', ' CH4.latitude.media_hora.txt'
  read (12,*) Latitud
  Close (12)
- open (unit=12, file='longitude.CH4.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
- If(errorread/=0) print *,' Error de lectura de archivo: ', 'longitude.CH4.media_hora.txt'
+ open (unit=12, file='CH4.longitude.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
+ If(errorread/=0) print *,' Error de lectura de archivo: ', ' CH4.longitude.media_hora.txt'
  read (12,*) Longitud
  Close (12)
  open (unit=12, file='scatter_phase.txt', status= 'old', Action='read', IOSTAT=errorread )
- If(errorread/=0) print *,' Error de lectura de archivo: ', 'scatter_phase.txt'
+ If(errorread/=0) print *,' Error de lectura de archivo: ', ' scatter_phase.txt'
  read (12,*) scatter_phase
  Close (12)
  
@@ -193,6 +197,34 @@ Do i =1, NXf
 End do
  
 !/Fin de Geolocalizacion 
+
+! ! Boetto3
+! open (15,file='trainningmatrix.txt', status='old', ACTION='READ', IOSTAT=errorread)
+! if (errorread/=0) Then
+!	print *, ' No se encuentra archivo con matriz de entrenamiento'
+!	exit
+! end if	
+ 
+! nboe =0
+! Do
+!	read (15,*, iostat= errorread) 
+!	if (errorread/=0) exit
+!	nboe = nboe+1
+!end do
+ 
+! allocate (fboe (nboe, 4)) 
+! allocate (dboe (nboe)) 
+! do i=1, nboe
+!  read (15,1500) fboe(i), dboe(i)
+! end do
+ 
+ 
+!             C1  C4  SP  mes clase
+!1500 format ( F6.4, F6.2, F5.2, F2.0, I2) ! Lectura de p
+
+ !/BOetto
+
+
 
  
  call get_command_argument(1, argument) ! Nombre de archivo lista.txt
@@ -309,7 +341,7 @@ filenamepathin = trim(pathin)//trim(filename)
  call diajuliano (idia, imes, iano, diaj)   ! entrada de reales en ves de enteros.
  call sunae(iano,diaj,ihora, latit, longit,az,el,ha,dec,soldst)  
 
- if (el < 5.0) then !! Cambiado a 5º
+ if (el < 3.0) then !! Cambiado a 5º
     write (*,*) '   ',cdia,'  ', hora,':', minu, '        Imagen eliminada, nocturna. ', el
     write (16,*) '                                   ', trim(filename),'   Eliminada, nocturna. '
     noct = noct +1
@@ -568,12 +600,28 @@ filenamepathin = trim(pathin)//trim(filename)
  
  
  ! Revision de matriz
-!$omp parallel 
-!$omp do
  do i = 1, NXf
     do j = 1, NYf
     
-		! Calculo de maximo y minimo mensual
+
+		! Correccion de datos 
+		if (CH1_in(i,j) > 15000) then
+            write (16,*) "CH1_in(", i, ",",j, ") =", CH1_in(i, j) , filename, iano,diaj,ihora,"Corregido, vecinos"
+   			CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i,j+1)+CH1_in(i-1,j)+CH1_in(i,j-1))/4.
+        else if (CH1_in(i,j) > 10000) then
+            write (16,*) "CH1_in(", i, ",",j, ") =", CH1_in(i, j) , filename, iano,diaj,ihora,"Corregido"
+   			CH1_in(i,j) = 10000
+        end if
+        if (CH1_in(i, j) < 0 ) then
+			write (16,*) "CH1_in(", i, ",", j, ") =", CH1_in(i, j), filename, iano,diaj,ihora,"Pixel malo"
+			
+			If (CH1_in(i+1,j) > 0 .and. CH1_in(i,j+1) > 0 .and. CH1_in(i-1,j) > 0 .and. CH1_in(i,j-1) > 0) Then
+				CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i,j+1)+CH1_in(i-1,j)+CH1_in(i,j-1))/4.        
+			Else
+				CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i-1,j))/2.
+			End If
+        end if
+        		! Calculo de maximo y minimo mensual !!!
 	Select Case (NInt(ihora*10))
 	Case (:107)
 		if (CH1_in(i,j) > max1040(i,j)) then
@@ -720,28 +768,10 @@ filenamepathin = trim(pathin)//trim(filename)
 		write (16,*) 'Imagen:',filename,' fuera de rango de max y min.'
 	End Select	
 
-		! Correccion de datos 
-		if (CH1_in(i,j) > 15000) then
-            write (16,*) "CH1_in(", i, ",",j, ") =", CH1_in(i, j) , filename, iano,diaj,ihora,"Corregido, vecinos"
-   			CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i,j+1)+CH1_in(i-1,j)+CH1_in(i,j-1))/4.
-        else if (CH1_in(i,j) > 10000) then
-            write (16,*) "CH1_in(", i, ",",j, ") =", CH1_in(i, j) , filename, iano,diaj,ihora,"Corregido"
-   			CH1_in(i,j) = 10000
-        end if
-        if (CH1_in(i, j) < 0 ) then
-			write (16,*) "CH1_in(", i, ",", j, ") =", CH1_in(i, j), filename, iano,diaj,ihora,"Pixel malo"
-			
-			If (CH1_in(i+1,j) > 0 .and. CH1_in(i,j+1) > 0 .and. CH1_in(i-1,j) > 0 .and. CH1_in(i,j-1) > 0) Then
-				CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i,j+1)+CH1_in(i-1,j)+CH1_in(i,j-1))/4.        
-			Else
-				CH1_in(i,j) = (CH1_in(i+1,j)+CH1_in(i-1,j))/2.
-			End If
-        end if
     end do
 end do
-!$omp end do 
 
-!$omp do
+
  do i = 1, NX
     do j = 1, NY 
 		if (CH4_in(i,j) > 15000) then
@@ -766,8 +796,15 @@ end do
         end if
     end do
  end do
-!$omp end do 
-!$omp end parallel
+
+ 
+ 
+
+! Prueba datos Boetto	
+!		call LDA(NXf, Nyf, Nx, Ny,nboe, real(CH1_in/10000.), real(CH4_in/-100.), SP/100., nint(mes), fboe, dboe, DI )			
+! /Prueba datos Boetto			
+
+
 
 
  ! Guardado de matriz recortada y revisada

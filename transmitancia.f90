@@ -39,15 +39,13 @@
  ! Variables NETCDF archivo entrada
  integer :: ncid, ncid_in, ncid_var, status 
  integer, parameter :: NDIMS = 3, NDIMS_IN	= 2     
- integer :: NX, NY, NXf, NYf, Nhora, nboe
+ integer :: NX, NY, NXf, NYf, Nhora
  real, dimension(:), allocatable :: x, y, xf, yf, hora
  integer, dimension(:,:), allocatable :: CH1_out, CH4_out   	! Matrices de archivo original
  integer, dimension(:,:), allocatable :: CH4_in , CH1_in        !  Matrices de archivo recortado
  Integer, dimension(:,:), allocatable :: CH1_max, CH1_min
  integer, dimension(:,:), allocatable :: Lat_CH1 , Lon_CH1, Lat_CH4 , Lon_CH4
  integer, dimension(:,:), allocatable :: Alt, Temp, HR, Vis, Albedo
- integer, dimension(:,:), allocatable :: fboe
- integer, dimension(:), allocatable :: dboe
  integer :: x_dimid, y_dimid, xf_dimid, yf_dimid, dia_dimid, hora_dimid
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
@@ -353,34 +351,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 ! call check( nf90_inq_varid(ncid_var, "Alt", Alt_varid) )
  
  !call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
- 
-! ! Boetto3
-! open (15,file='trainningmatrix.txt', status='old', ACTION='READ', IOSTAT=errorread)
-! if (errorread/=0) Then
-!	print *, ' No se encuentra archivo con matriz de entrenamiento'
-!	exit
-! end if	
- 
-! nboe =0
-! Do
-!	read (15,*, iostat= errorread) 
-!	if (errorread/=0) exit
-!	nboe = nboe+1
-!end do
- 
-! allocate (fboe (nboe, 4)) 
-! allocate (dboe (nboe)) 
-! do i=1, nboe
-!  read (15,1500) fboe(i), dboe(i)
-! end do
- 
- 
-!             C1  C4  SP  mes clase
-!1500 format ( F6.4, F6.2, F5.2, F2.0, I2) ! Lectura de p
-
- !/BOetto
- 
- 
+  
  
  do rec = 1, Nhora
 	Directa = -1
