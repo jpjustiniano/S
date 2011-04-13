@@ -438,23 +438,28 @@ real :: k1, k2
 i=0; j=0
 do while (i <= horasdia)
 	i=i+1
-inter: do while (j <= Nimagenesdia)
+inter: do while (j < Nimagenesdia)
 		j=j+1
+		print *, xo(i), rxo(j) , ryo(j), Eryo(j), Ex_h(i)
 		if (xo(i)+.5 < rxo(j) .and. j==1) then
 			j = 0
 			exit inter
 		end if	
-		print *, xo(i), rxo(j) , ryo(j), Eryo(j), Ex_h(i)
 		if (j==1) then
 				yo(i) = (ryo(j)/Eryo(j))*Ex_h(i)
-				print *,yo(i)
+				print *,'                           ',yo(i)/10
 				!exit inter
 				i=i+1; j = j+1
+		end if
+		if (j>Nimagenesdia) then      !!!!Revisar !!!!
+				yo(i) = (ryo(Nimagenesdia)/Eryo(Nimagenesdia))*Ex_h(i)
+				print *,'                           ',yo(i)/10
+				exit inter
 		end if
 		if (xo(i) < rxo(j)) then 
 			yo(i) = ((ryo(j-1)/Eryo(j-1))*(rxo(j)-xo(i))/(rxo(j)-rxo(j-1)) + &
 					(ryo(j)/Eryo(j))*(xo(i)-rxo(j-1))/(rxo(j)-rxo(j-1)))*Ex_h(i)
-			print *,yo(i)
+			print *,'                           ',yo(i)/10
 			exit inter
 		end if
 	end do inter
