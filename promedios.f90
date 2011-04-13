@@ -6,7 +6,7 @@
 ! Hora inicial sin datos. 
 
 
-Program ProcesamientoImagenes_media_hora
+Program Interpolacion_Imagenes_media_hora
  use netcdf
  !$ use OMP_LIb
  implicit none
@@ -26,7 +26,7 @@ Program ProcesamientoImagenes_media_hora
  integer :: Nhora, NXf, NYf
  integer,dimension(8) :: tiempo, tiempof, tiempoa
  integer :: TIDmax, tz, DeAllocateStatus
- 
+ real  ::  Eryot, Ex_ht
  ! Suane
   REAL ::  az,el,ha,dec,soldst
  
@@ -69,7 +69,7 @@ Program ProcesamientoImagenes_media_hora
  call date_and_time(DATE=fecha, VALUES=tiempo)
  tiempoa = tiempo
  
- open (unit=16, file='log_prom.txt')
+ !open (unit=16, file='log_prom.txt')
  
  call get_command_argument(1, argument)
  largofilein=len_trim(argument)
@@ -253,7 +253,7 @@ Program ProcesamientoImagenes_media_hora
 
  Nimagenesdia = 0
  do i =1, diasmes
- inte:Do j =1, Nhora   !! Optimizable.
+inte: Do j =1, Nhora   !! Optimizable.
 		if (hora(j)> (i-1)*24 .and. hora(j) < (i)*24) then
 			Nimagenesdia(i)=Nimagenesdia(i)+1
 			Nimagen(i,Nimagenesdia(i))=j
@@ -282,7 +282,7 @@ Program ProcesamientoImagenes_media_hora
  
  Do i = 1, diasmes ! Se guarda la informacion de todas las imagenes del dia en las matrices 3D
 	call check( nf90_put_var(ncid_prom, dia_varid_prom, i,start=(/i/)) )
-	print *, ' Dia : ',i, ', imagenes:', Nimagenesdia(i)
+	print *, ' Dia :',i, ',imagenes:', Nimagenesdia(i)
 	If (Nimagenesdia(i)<Nimagenesdiamin) cycle
 	
 	allocate (Global  (NXf, NYf, Nimagenesdia(i)) )
@@ -322,21 +322,21 @@ Program ProcesamientoImagenes_media_hora
 	
 	 exter: Do lon = 1, Nxf			! Se procesa en NXxNY la matriz 3D diaria
 		inter: Do lat = 1, Nyf
-				if (Global (lon,lat, 3)<0) cycle inter   !! cuidado
-				if (Directa (lon,lat, 3) < 0) cycle inter
+				!if (Global (lon,lat, 3)<0) cycle inter   !! cuidado
+				!if (Directa (lon,lat, 3) < 0) cycle inter
 				
 				do k = 1, horasdia
 				call sunae (ano,diaj,xo(k),Lat_CH1(lon,lat)/100., Lon_CH1(lon,lat)/100., az,el,ha,dec,soldst)
 					Ex_h(K) = 1367.*(1+0.033*cos(360.*diaj/365.))*cos((90.-el)*cdr)
+					Ex_ht =Ex_h(K)
 					If (Ex_h(K)<0.) Ex_h(K)=0.
-					!print *, ano,diaj,xo(k),Lat_CH1(lon,lat)/100., Lon_CH1(lon,lat)/100., az,el,Ex_h(K)	
 				end do	
 
 				do k = 1,Nimagenesdia(i)
 				call sunae (ano,diaj,horaimagenes(k,i),Lat_CH1(lon,lat)/100., Lon_CH1(lon,lat)/100., az,el,ha,dec,soldst)
 					Eryo(K) = 1367.*(1+0.033*cos(360.*diaj/365.))*cos((90.-el)*cdr)
+					Eryot=Eryo(K)
 					If (Eryo(K)<0.) Eryo(K)=0
-					!print *, ano,diaj,horaimagenes(k,i),Lat_CH1(lon,lat)/100., Lon_CH1(lon,lat)/100., az,el,Eryo(K)
 				end do	
 				
 				! Agregar puntos de salida y puesta del sol
@@ -345,7 +345,7 @@ Program ProcesamientoImagenes_media_hora
 				where (ryo<0) ryo=0
 				!print *, Nimagen(i,1),Nimagen(i,Nimagenesdia(i)), el, ((90.-el)*cdr)
 				!print *, Global(lon,lat,Nimagen(i,1):Nimagen(i,Nimagenesdia(i)))
-				call InterLinealPond( horaini,horasdia, Nimagenesdia(i),rxo,ryo, Eryo, xo, Ex_h, yo )
+				call InterLinealPond( horaini,horasdia, Nimagenesdia(i),rxo,ryo, Eryo*10., xo, Ex_h*10., yo )
 
 				Global_hor(lon,lat,:) = yo
 				!print *,'yo:', Global_hor(lon,lat,:)
@@ -390,8 +390,8 @@ print *, '   Terminado exitoso de la interpolacion!!'
 write (*,200) tiempof(5) - tiempo(5) ,tiempof(6)- tiempo(6),tiempof(7) - tiempo(7)
 print *
 
-200 Format ('   Tiempo procesamiento: ',I3' hr., ',I3 'min., ',I3, 'sec.')
-300 Format ('   Tiempo procesamiento: ',I3 'min., ',I3, 'sec.')
+200 Format ('      Tiempo procesamiento: ',I3' hr., ',I3 'min., ',I3, 'sec.')
+300 Format ('      Tiempo procesamiento: ',I3 'min., ',I3, 'sec.')
 
  contains
 subroutine InterLinealPond ( horaini,horasdia,Nimagenesdia,rxo,ryo, Eryo, xo, Ex_h, yo )
@@ -405,30 +405,65 @@ real, dimension (horasdia), intent(out) :: yo
 integer :: i = 1, j= 1
 real :: k1, k2
 
-! write (*,*) 'rxo:',rxo
-! write (*,*) 'ryo:',ryo
-! write (*,*) 'xo:',xo
-! write (*,*) 'Ex_h:',Ex_h
  yo=0.
-! read (*,*)
  
- 
-exter: do i = 1, horasdia
-	inter: Do j = 1, Nimagenesdia
-		if (xo(i) > rxo(j) ) then
-			if (j>1) then 
-			 k1 = ryo(j-1)/Eryo(j-1)
-			 k2 = ryo(j)/Eryo(j)
-			 yo(i) = (((xo(i)-rxo(j-1))/(rxo(j)-rxo(j-1)))*k1 +((rxo(j)-xo(i))/(rxo(j)-rxo(j-1)))*k2)*Ex_h(i)
-			else 
-			 yo(i) = (ryo(j)/Eryo(j))*Ex_h(i)
-			end if
-			where (yo < 0.) yo=0.
-		exit inter
-		end if 
+!exter: do i = 1, horasdia
+!	inter: Do j = 1, Nimagenesdia
+!		print *, xo(i), rxo(j) , ryo(j), Eryo(j), Ex_h(i)
+!		if (j==1) then
+!			if (xo(i)+.5 > rxo(j) .and. abs(xo(i)-rxo(j))<0.5) then
+!				yo(i) = (ryo(j)/Eryo(j))*Ex_h(i)
+!				print *,yo(i)
+!				exit inter
+!			end if
+!		else
+!			if (xo(i)+.5 > rxo(j) .and. xo(i) < rxo(j)) then
+!			yo(i) = ((ryo(j-1)/Eryo(j-1))*(rxo(j)-xo(i))/(rxo(j)-rxo(j-1)) + &
+!						(ryo(j)/Eryo(j))*(xo(i)-rxo(j-1))/(rxo(j)-rxo(j-1)))*Ex_h(i)
+!				print *,yo(i)
+!				exit inter
+!			end if
+!		end if	
+!!		if (xo(i)+.5 > rxo(j) .and. xo(i)+.5 < rxo(j-1)) then
+!!			if (j>1) then 
+!!			 yo(i) = (ryo(j-1)/Eryo(j-1))*(rxo(j)-xo(i))/(rxo(j)-rxo(j-1)) + (ryo(j)/Eryo(j))*(xo(i)-rxo(j-1))/(rxo(j)-rxo(j-1))
+!!			else 
+!!			 yo(i) = (ryo(j)/Eryo(j))*Ex_h(i)
+!!			end if
+!!			print *,yo(i)
+!!			exit inter
+!!		end if 
+!	end do inter
+!end do exter
+i=0; j=0
+do while (i <= horasdia)
+	i=i+1
+inter: do while (j <= Nimagenesdia)
+		j=j+1
+		if (xo(i)+.5 < rxo(j) .and. j==1) then
+			j = 0
+			exit inter
+		end if	
+		print *, xo(i), rxo(j) , ryo(j), Eryo(j), Ex_h(i)
+		if (j==1) then
+				yo(i) = (ryo(j)/Eryo(j))*Ex_h(i)
+				print *,yo(i)
+				!exit inter
+				i=i+1; j = j+1
+		end if
+		if (xo(i) < rxo(j)) then 
+			yo(i) = ((ryo(j-1)/Eryo(j-1))*(rxo(j)-xo(i))/(rxo(j)-rxo(j-1)) + &
+					(ryo(j)/Eryo(j))*(xo(i)-rxo(j-1))/(rxo(j)-rxo(j-1)))*Ex_h(i)
+			print *,yo(i)
+			exit inter
+		end if
 	end do inter
-end do exter
+end do 
 
+
+
+
+where (yo < 0.) yo=0.
 
 end subroutine InterLinealPond
  
@@ -609,4 +644,4 @@ END SUBROUTINE diajuliano
 !   mnanom,eclong,oblqec,ra,and lmst in radians
 End subroutine
 
-End program ProcesamientoImagenes_media_hora
+End program Interpolacion_Imagenes_media_hora
