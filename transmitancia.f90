@@ -343,12 +343,11 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  BETA = 0.5 - 3.*GLINHA/8. - 7.*GLINHA**3/128. - 9.*GLINHA**5/128. ! cloud backscatter coefficient
 
  ! Variables meteorologicas
-! call check( nf90_open('variables.nc', nf90_nowrite, ncid_var) )
-! call check( nf90_inq_varid(ncid_var, "Temp", Temp_varid) )
-! call check( nf90_inq_varid(ncid_var, "HR", HR_varid) )
-! call check( nf90_inq_varid(ncid_var, "Vis", Vis_varid) )
-! call check( nf90_inq_varid(ncid_var, "Albedo", Albedo_varid) )
-! call check( nf90_inq_varid(ncid_var, "Alt", Alt_varid) )
+ call check( nf90_open('variables.nc', nf90_nowrite, ncid_var) )
+ call check( nf90_inq_varid(ncid_var, "Temp", Temp_varid) )
+ call check( nf90_inq_varid(ncid_var, "HR", HR_varid) )
+ call check( nf90_inq_varid(ncid_var, "Albedo", Albedo_varid) )
+ call check( nf90_inq_varid(ncid_var, "Alt", Alt_varid) )
  
  !call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
   
@@ -369,10 +368,9 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 	startm(3) = nint(mes)
 	
 	!Lectura de datos climatologicos
-	!call check( nf90_get_var (ncid_var, Temp_varid, Temp, startm, countf) )
-	!call check( nf90_get_var (ncid_var, HR_varid, HR, startm, countf) )
-	!call check( nf90_get_var (ncid_var, Vis_varid, vis, startm, count = countf) )
-	!call check( nf90_get_var (ncid_var, Albedo_varid, Albedo, startm, count = countf) )
+	call check( nf90_get_var (ncid_var, Temp_varid, Temp, startm, countf) )
+	call check( nf90_get_var (ncid_var, HR_varid, HR, startm, countf) )
+	call check( nf90_get_var (ncid_var, Albedo_varid, Albedo, startm, countf) )
 	
 !	  Temp = 293. ! (K)
 !	  HR = .4 	! (0-1. ) 
@@ -507,14 +505,14 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			
 		  IF ( Altt > 0. ) THEN 
 			
-			!Tempt = Temp(i,j)/100.+ 273.15
-			Tempt = 300.
-			!HRt   =  HR(i,j)/10000.
-			HRt   = 0.4
-			!Albedot = albedo(i,j)/100.
-			Albedot = 0.15
+			Tempt = Temp(i,j)/100.+ 273.15
+			!Tempt = 300.
+			HRt   =  HR(i,j)/10000.
+			!HRt   = 0.4
+			Albedot = albedo(i,j)/100.
+			!Albedot = 0.15
 			!Vist = vis(i,j)
-			Vist = 100.
+			Vist = 70.
 			! calculation of the visibility at the station as function of visibility and altitude
 			vist   = vist * EXP( (LOG(100.0/vist)/1000.0)*Altt )
 			! test for visibility between 2 and 150 km
