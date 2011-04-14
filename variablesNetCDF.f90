@@ -112,11 +112,11 @@
 	start = (/ 1, 1, 1 /)
     
 ! Matrices de Geolocalizacion 
- open (unit=12, file='latitude.CH4.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
+ open (unit=12, file='CH4.latitude.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
  If(errorread/=0) print *,' Error de lectura de archivo: ', 'latitude.CH4.media_hora.txt'
  read (12,*) Latitud
  Close (12)
- open (unit=12, file='longitude.CH4.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
+ open (unit=12, file='CH4.longitude.media_hora.txt', status= 'old', Action='read', IOSTAT=errorread )
  If(errorread/=0) print *,' Error de lectura de archivo: ', 'longitude.CH4.media_hora.txt'
  read (12,*) Longitud
  Close (12)
@@ -191,15 +191,15 @@ End do
    
 !************* Altitud
 print *,'  Altitud'
-	Open(10,FILE='./Altura/Altura.media_hora.txt', IOSTAT=ierror, status= 'old', Action='read') ! (m)
-	If (ierror /= 0) Then 
-		print *, '   Erorr en leer archivo : ./Altura/Altura.media_hora.txt'
-		goto 999
-	End if
-	read (10,*, IOSTAT=ierror) ((Altura(i,j), j = 1, NYf), i=1, NXf)
-	close (10)
+!	Open(10,FILE='./Altura/Altura.media_hora.txt', IOSTAT=ierror, status= 'old', Action='read') ! (m)
+!	If (ierror /= 0) Then 
+!		print *, '   Erorr en leer archivo : ./Altura/Altura.media_hora.txt'
+!		goto 999
+!	End if
+!	read (10,*, IOSTAT=ierror) ((Altura(i,j), j = 1, NYf), i=1, NXf)
+!	close (10)
 
-   call check( nf90_put_var(ncid, Alt_varid, Altura) )
+!   call check( nf90_put_var(ncid, Alt_varid, Altura) )
 !************* /Altitud
    
 !************* Temperatura
@@ -209,11 +209,11 @@ Do k = 1, 12
 	  
 	If ( k .le. 9) then
 		write (c1i,'(I1)') k 
-		ci=  '0'//c1i
+		ci=  c1i
 	else
 		write (ci,'(I2)') k
    end if 
-   filename= './Temperatura/Temperatura.'//ci//'.media_hora.txt'
+   filename= './Temperatura/Temp.'//TRIM(ci)//'.media_hora.txt'
    
    Open(10,FILE=filename, IOSTAT=ierror, status= 'old', Action='read') !(c*100)
 	If (ierror/=0) Then
@@ -265,11 +265,11 @@ End do
 	      
 		If ( k .le. 9) then
 			write (c1i,'(I1)') k 
-			ci=  '0'//c1i
+			ci=  c1i
 		else
 			write (ci,'(I2)') k 
 		end if 
-		filename= './HR/HR.'//ci//'.media_hora.txt'
+		filename= './HR/HR.'//TRIM(ci)//'.media_hora.txt'
 		
 		Open(10,FILE=filename, IOSTAT=ierror)
 		If (ierror/=0) Then
@@ -291,11 +291,11 @@ End do
 	      
 		If ( k .le. 9) then
 			write (c1i,'(I1)') k 
-			ci=  '0'//c1i
+			ci=  c1i
 		else
 			write (ci,'(I2)') k 
 		end if 
-	    filename= './Albedo/Albedo.'//ci//'.media_hora.txt'
+	    filename= './Albedo/Albedo.'//TRIM(ci)//'.media_hora.txt'
        
        Open(10,FILE=filename, IOSTAT=ierror, status= 'old', Action='read')
 		If (ierror/=0) Then
