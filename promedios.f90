@@ -315,11 +315,8 @@ inte: Do j =1, Nhora   !! Optimizable.
 		print *, ' Nimagen(i,1):',Nimagen(i,1)
 	end if
 
-
-	
 	call diajuliano (i, mes, ano, diaj)   ! entrada de reales en ves de enteros.
 
-	
 	 exter: Do lon = 1, Nxf			! Se procesa en NXxNY la matriz 3D diaria
 		inter: Do lat = 1, Nyf
 				!if (Global (lon,lat, 3)<0) cycle inter   !! cuidado
@@ -346,16 +343,13 @@ inte: Do j =1, Nhora   !! Optimizable.
 				!print *, Nimagen(i,1),Nimagen(i,Nimagenesdia(i)), el, ((90.-el)*cdr)
 				!print *, Global(lon,lat,Nimagen(i,1):Nimagen(i,Nimagenesdia(i)))
 				call InterLinealPond( horaini,horasdia, Nimagenesdia(i),rxo,ryo, Eryo*10., xo, Ex_h*10., yo )
-
 				Global_hor(lon,lat,:) = yo
 				!print *,'yo:', Global_hor(lon,lat,:)
 				
 				
 				ryo = real(Directa(lon,lat,:))
 				where (ryo<0) ryo=0
-				
 				call InterLinealPond( horaini,horasdia, Nimagenesdia(i),rxo,ryo, Eryo, xo, Ex_h, yo )
-				
 				Directa_hor(lon,lat,:) = yo
 				!print *, 'yo:',Directa_hor(lon,lat,:)
 				
@@ -393,7 +387,9 @@ print *
 200 Format ('      Tiempo procesamiento: ',I3' hr., ',I3 'min., ',I3, 'sec.')
 300 Format ('      Tiempo procesamiento: ',I3 'min., ',I3, 'sec.')
 
+
  contains
+
 subroutine InterLinealPond ( horaini,horasdia,Nimagenesdia,rxo,ryo, Eryo, xo, Ex_h, yo )
 implicit none
 
@@ -406,67 +402,38 @@ integer :: i = 1, j= 1
 real :: k1, k2
 
  yo=0.
- 
-!exter: do i = 1, horasdia
-!	inter: Do j = 1, Nimagenesdia
-!		print *, xo(i), rxo(j) , ryo(j), Eryo(j), Ex_h(i)
-!		if (j==1) then
-!			if (xo(i)+.5 > rxo(j) .and. abs(xo(i)-rxo(j))<0.5) then
-!				yo(i) = (ryo(j)/Eryo(j))*Ex_h(i)
-!				print *,yo(i)
-!				exit inter
-!			end if
-!		else
-!			if (xo(i)+.5 > rxo(j) .and. xo(i) < rxo(j)) then
-!			yo(i) = ((ryo(j-1)/Eryo(j-1))*(rxo(j)-xo(i))/(rxo(j)-rxo(j-1)) + &
-!						(ryo(j)/Eryo(j))*(xo(i)-rxo(j-1))/(rxo(j)-rxo(j-1)))*Ex_h(i)
-!				print *,yo(i)
-!				exit inter
-!			end if
-!		end if	
-!!		if (xo(i)+.5 > rxo(j) .and. xo(i)+.5 < rxo(j-1)) then
-!!			if (j>1) then 
-!!			 yo(i) = (ryo(j-1)/Eryo(j-1))*(rxo(j)-xo(i))/(rxo(j)-rxo(j-1)) + (ryo(j)/Eryo(j))*(xo(i)-rxo(j-1))/(rxo(j)-rxo(j-1))
-!!			else 
-!!			 yo(i) = (ryo(j)/Eryo(j))*Ex_h(i)
-!!			end if
-!!			print *,yo(i)
-!!			exit inter
-!!		end if 
-!	end do inter
-!end do exter
+
 i=0; j=0
-do while (i <= horasdia)
+do while (i < horasdia)
 	i=i+1
-inter: do while (j < Nimagenesdia)
+	!print *, i, horasdia
+inter: do while (j <= Nimagenesdia)
 		j=j+1
-		print *, xo(i), rxo(j) , ryo(j), Eryo(j), Ex_h(i)
-		if (xo(i)+.5 < rxo(j) .and. j==1) then
+		IF (j>Nimagenesdia) j=Nimagenesdia
+		!print *, xo(i), rxo(j) , ryo(j), Eryo(j), Ex_h(i), i, j
+		if (xo(i)+.5 < rxo(j) .and. j==1) then		
 			j = 0
 			exit inter
 		end if	
 		if (j==1) then
 				yo(i) = (ryo(j)/Eryo(j))*Ex_h(i)
-				print *,'                           ',yo(i)/10
+!				print *,'                           ',yo(i)/10
 				!exit inter
 				i=i+1; j = j+1
 		end if
-		if (j>Nimagenesdia) then      !!!!Revisar !!!!
+		if (j==Nimagenesdia) then    
 				yo(i) = (ryo(Nimagenesdia)/Eryo(Nimagenesdia))*Ex_h(i)
-				print *,'                           ',yo(i)/10
+!				print *,'                           ',yo(i)/10
 				exit inter
 		end if
 		if (xo(i) < rxo(j)) then 
 			yo(i) = ((ryo(j-1)/Eryo(j-1))*(rxo(j)-xo(i))/(rxo(j)-rxo(j-1)) + &
 					(ryo(j)/Eryo(j))*(xo(i)-rxo(j-1))/(rxo(j)-rxo(j-1)))*Ex_h(i)
-			print *,'                           ',yo(i)/10
+!			print *,'                           ',yo(i)/10
 			exit inter
 		end if
 	end do inter
 end do 
-
-
-
 
 where (yo < 0.) yo=0.
 
