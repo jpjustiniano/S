@@ -1,6 +1,5 @@
 ! Copyright (C) 2011, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
 
-
 program extraccion
 
  use netcdf
@@ -12,16 +11,17 @@ program extraccion
  integer, parameter :: Nimagenesdiamax = 26 
  integer :: horaf, horaini, horasdia, diasmes
  integer :: largofilein, i , j, k
- integer :: ano, mes
+ integer :: ano, mes, dayj
  character(8)  :: fecha
  character(4)  :: cano
  character(2)  :: cmes
- character (40) :: argument 
+ character (50) :: argument 
  character(60) :: filename_out
  integer :: Nhora, NXf, NYf, Ndias, iLat, iLon
  integer,dimension(8) :: tiempo, tiempof, tiempoa
  integer :: TIDmax
  real :: Globfact, Dirfact, Latfact, Lonfact, horad, lat, lon
+ real :: az,el,ha,dec,soldst
  
  integer, dimension(:,:), allocatable :: Nimagen, Lat_CH1, Lon_CH1
  integer, dimension(:,:), allocatable :: Global, Directa, Difusa, DNI
@@ -125,7 +125,7 @@ inter: Do
  End if
  filename_out = argument(1:largofilein-3)//'.datos.txt'
  open (unit=15, file=filename_out)
- write (15,*) '  Latitud: ',Lat,' ,  Longitud: ',Lon
+ write (15,*) '  Latitud: ',Lat_CH1(1,i)/100.,' ,  Longitud: ',Lon_CH1(j,i)/100.
  
  start = (/ i, j, 1, 1 /)	 
 	 
@@ -151,16 +151,19 @@ inter: Do
 	call check( nf90_get_var (ncid, Global_varid, Global, start, count) )
 	call check( nf90_get_var (ncid, Directa_varid, Directa, start, count) )	
 	
-	write (*,*) '  Año    Mes  Dia   Hora(UTC)   Global      Directa    Difusa'
-	write (15,*) 'Año;Mes;Dia;Hora(UTC);Global;Directa;Difusa'
+	write (15,*)
+	write (*,*)  ' Año Mes Dia Hora(UTC) Global   Directa   Difusa   DNI   el'
+	write (15,*) 'Año;Mes;Dia;Hora(UTC);Global;Directa;Difusa;DNI'
 exter2: Do i = 1 , 31
+			call diajuliano (i, mes, ano, dayj)  
 inter2:	Do j = 1, Nhora
 			if (hora(j)> (i-1)*24 .and. hora(j) < (i)*24) then 
 				horad = mod(hora(j),24.)
+				call  sunae(ano,dayj,horad,iLat/100.,iLon/100.,az,el,ha,dec,soldst)
 				write (*,200)  ano, mes, i, horad, Global(j,1)*Globfact, Directa(j,1)*Dirfact,&
-					(Global(j,1)- Directa(j,1))*Globfact
+					(Global(j,1)- Directa(j,1))*Globfact, Directa(j,1)*Dirfact/sin(el*3.141592/180.), el
 				write (15,215)  ano, mes, i, horad, Global(j,1)*Globfact, Directa(j,1)*Dirfact,&
-					(Global(j,1)- Directa(j,1))*Globfact	
+					(Global(j,1)- Directa(j,1))*Globfact, Directa(j,1)*Dirfact/sin(el*3.141592/180.)	
 			end if
 		end do inter2
 	end do exter2
@@ -197,18 +200,24 @@ inter2:	Do j = 1, Nhora
 	call check( nf90_get_var (ncid, Global_varid, Global, start, count) )
 	call check( nf90_get_var (ncid, Directa_varid, Directa, start, count) )
 	
-	write (*,*) '   Año	Mes		Dia		Hora (UTC)	 Global		Directa		Difusa'
-	write (*,200)  ((ano, mes, j, hora(i)/10., Global(i,j)*Globfact, Directa(i,j)*Dirfact,&
-			(Global(i,j)- Directa(i,j))*Globfact, i=1,Nhora),j=1,Ndias)
+	write (*,*) ' Año Mes Dia Hora(UTC) Global   Directa   Difusa   DNI   el'
 	write (15,*)
-	write (15,*) 'Año;Mes;Dia;Hora(UTC);Global;Directa;Difusa'
-	write (15,215)  ((ano, mes, j, hora(i)/10., Global(i,j)*Globfact, Directa(i,j)*Dirfact,&
-			(Global(i,j)- Directa(i,j))*Globfact, i=1,Nhora),j=1,Ndias)		
+	write (15,*) 'Año;Mes;Dia;Hora(UTC);Global;Directa;Difusa;DNI'
+	Do 	j=1,Ndias
+		call diajuliano (i, mes, ano, dayj)  
+		Do i=1,Nhora
+		call  sunae(ano,dayj, hora(i)/10.,iLat/100.,iLon/100.,az,el,ha,dec,soldst)
+		write (*,200) ano, mes, j, hora(i)/10., Global(i,j)*Globfact, Directa(i,j)*Dirfact,&
+			(Global(i,j)- Directa(i,j))*Globfact, Directa(i,j)*Dirfact/sin(el*3.141592/180.), el
 
+		write (15,215)  ano, mes, j, hora(i)/10., Global(i,j)*Globfact, Directa(i,j)*Dirfact,&
+			(Global(i,j)- Directa(i,j))*Globfact, Directa(i,j)*Dirfact/sin(el*3.141592/180.)
+		End do
+	end do
  End if
 
-200 Format ('  ',I4,'  ',I2,'  ',I3,'  ',F4.1,'  ',F7.2,'  ',F7.2,'  ',F7.2)
-215 Format (I5,';',I3,';',I3,';',F5.1,';',F8.2,';',F8.2,';',F8.2)
+200 Format ('  ',I4,'  ',I2,'  ',I3,'  ',F4.1,'  ',F7.2,'  ',F7.2,'  ',F7.2,'  ',F7.2,'  ',F7.2)
+215 Format (I5,';',I3,';',I3,';',F5.1,';',F8.2,';',F8.2,';',F8.2,';',F8.2)
 
  contains
  subroutine check(status)
