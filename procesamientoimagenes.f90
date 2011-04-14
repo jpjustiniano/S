@@ -798,10 +798,9 @@ end do
  end do
 
  
- 
-
 ! Prueba datos Boetto	
-!		call LDA(NXf, Nyf, Nx, Ny,nboe, real(CH1_in/10000.), real(CH4_in/-100.), SP/100., nint(mes), fboe, dboe, DI )			
+!		call LDA(NXf, Nyf, Nx, Ny,nboe, real(CH1_in/10000.), real(CH4_in/-100.), SP/100., nint(mes), fboe, dboe, DI )	
+		
 ! /Prueba datos Boetto			
 
 
