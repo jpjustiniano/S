@@ -225,6 +225,8 @@ Do k = 1, 12
 	
 	read(10,*, IOSTAT=ierror) ((Temperatura(i,j), j = 1, NYf), i=1, NXf)
 	close (10)
+	
+	where (Temperatura .le. 200) Temperatura = 200    ! Limitada temperatura minima mensual a 2ºC
 
 	call check( nf90_put_var(ncid, Temp_varid, Temperatura, start, count) )	
 	
