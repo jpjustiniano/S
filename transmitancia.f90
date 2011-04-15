@@ -29,8 +29,8 @@
  implicit none
  
  ! Variables Programa
- integer :: i=1, j, rec, ii,jj, errorread
- real ano, mes, diaj, dia 
+ integer :: i=1, j, rec, ii,jj, errorread, diaj
+ real ano, mes, dia 
  Real horad
  character (30) :: argument  ! Nombre de archivo 
  character(8)  :: fecha
@@ -496,6 +496,8 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		COSZEN = sin(DEC*cdr)*sin(YLATR) + cos(DEC*cdr)*cos(YLATR)*COWI
 		THETA  = ACOS(COSZEN)/CDR
 		XI0   = 1367.00*E0*COSZEN
+		
+!print *, 'Lat:',YLATR/cdr,'Lon:', Lon_CH1(NXf/2,j)/100.,'Thetha:',THETA,'Ext:',XI0 ,'E0:',E0
 
 		
 !$omp parallel private(XIM,Tempt,Altt,HRt,Albedot,Vist,Latmos,TS, & ! TIMCOR,TSOLAR,WSOLAR,COWI,
@@ -662,7 +664,7 @@ IMPLICIT NONE
 real, INTENT(IN):: day          !Day (dd)
 real, INTENT(IN) :: month        !Month (mm)
 real, INTENT(IN) :: year         !Year (yyyy)
-real, INTENT(out) :: dayj 		!Day of year
+integer, INTENT(out) :: dayj 		!Day of year
 INTEGER :: i            			!Index,variable
 INTEGER :: leap_day     			!Extra day for leap year
 
@@ -693,5 +695,72 @@ DO i = 1, nint(month)-1
 END DO
 
 END SUBROUTINE diajuliano
+
+SUBROUTINE ASTRO (JDAY,E0,DEC,ET)
+!     calculate eccentricity correction, declination e equation of time
+!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!     PI    : pi
+!     CDR   : change degree to radians
+!     DANG  : day angle (radians)
+!     DEC   : declination (o)
+!     E0    : eccentricity correction factor of earth
+!     ET    : equation of time (minutes)
+!     JDAY  : julian day
+!     COnDA : cossine of n*day angle
+!     SInDA : sine of n*day angle                                      
+!......................................................................	
+	implicit none
+	
+	integer, intent(in) :: jday
+	real(8), intent(out) ::  E0,DEC,ET
+	
+	real(8) :: CO1DA, CO2DA, CO3DA, SI1DA, SI2DA, SI3DA
+	real(8) :: D0,DC1,DC2,DC3,DS1,DS2,DS3,DANG
+	real(8) :: E00, EC1,EC2,ES1,ES2
+	real(8) :: ET0, TC1,TC2,TS1,TS2
+
+!     definition of constants bellow
+      !PI    = ACOS(-1.0)
+      !CDR  = PI/180.0
+
+!     calculate day angle
+      DANG  = 2.0*PI*(FLOAT(JDAY) - 1.0)/365.0
+
+!     calculate sines and cossines of the day angle
+      CO1DA = DCOS(DANG)
+      CO2DA = DCOS(2*DANG)
+      CO3DA = DCOS(3*DANG)
+      SI1DA = DSIN(DANG)
+      SI2DA = DSIN(2*DANG)
+      SI3DA = DSIN(3*DANG)
+
+!     calculate declination
+      D0    = 0.006918
+      DC1   = 0.399912
+      DC2   = 0.006758
+      DC3   = 0.002697
+      DS1   = 0.070257
+      DS2   = 0.000907
+      DS3   = 0.001480
+      DEC   = (D0 - DC1*CO1DA + DS1*SI1DA- DC2*CO2DA + DS2*SI2DA- DC3*CO3DA + DS3*SI3DA)/CDR
+
+!     calculate eccentricity correction
+      E00   = 1.000110
+      EC1   = 0.034221
+      EC2   = 0.000719
+      ES1   = 0.001280
+      ES2   = 0.000077
+      E0    = E00 + EC1*CO1DA + ES1*SI1DA + EC2*CO2DA + ES2*SI2DA
+
+!     calculate equation of time
+      ET0    = 0.000075
+      TC1    = 0.001868
+      TC2    = 0.014615
+      TS1    = 0.032077
+      TS2    = 0.040890
+      ET     = (ET0 + TC1*CO1DA - TS1*SI1DA - TC2*CO2DA - TS2*SI2DA) *229.18
+
+      RETURN
+END SUBROUTINE ASTRO 
 
 End Program trasmitancia
