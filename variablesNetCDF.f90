@@ -191,15 +191,17 @@ End do
    
 !************* Altitud
 print *,'  Altitud'
-!	Open(10,FILE='./Altura/Altura.media_hora.txt', IOSTAT=ierror, status= 'old', Action='read') ! (m)
-!	If (ierror /= 0) Then 
-!		print *, '   Erorr en leer archivo : ./Altura/Altura.media_hora.txt'
-!		goto 999
-!	End if
-!	read (10,*, IOSTAT=ierror) ((Altura(i,j), j = 1, NYf), i=1, NXf)
-!	close (10)
-
-!   call check( nf90_put_var(ncid, Alt_varid, Altura) )
+	Open(10,FILE='./Altura/Altura.media_hora.txt', IOSTAT=ierror, status= 'old', Action='read') ! (m)
+	If (ierror /= 0) Then 
+		print *, '   Erorr en leer archivo : ./Altura/Altura.media_hora.txt'
+		goto 999
+	End if
+	read (10,*, IOSTAT=ierror) ((Altura(i,j), j = 1, NYf), i=1, NXf)
+	close (10)
+	
+	where (Altura .ge. 0) Altura = Altura/100.
+	print*,'             Max:',Maxval(Altura), '    Min: ',Minval(Altura)
+   call check( nf90_put_var(ncid, Alt_varid, Altura) )
 !************* /Altitud
    
 !************* Temperatura
@@ -225,6 +227,9 @@ Do k = 1, 12
 	close (10)
 
 	call check( nf90_put_var(ncid, Temp_varid, Temperatura, start, count) )	
+	
+	print*, k,' Max mes : ',Maxval(Temperatura)/100., 'Min mes : ',Minval(Temperatura)/100.
+	
 End do
 !************* /Temperatura
    
@@ -279,8 +284,10 @@ End do
 		
 		read(10,*, IOSTAT=ierror) ((HR(i,j), j = 1, NYf), i=1, NXf)
 		close (10)
+		where (HR <500) HR = 500  !! valores menores falla el modelo.
 
-		call check( nf90_put_var(ncid, HR_varid, HR, start, count) )	
+		call check( nf90_put_var(ncid, HR_varid, HR, start, count) )
+		print*, k,' Max mes : ',MAxval(HR)/10000., 'Min mes : ',Minval(HR,HR.gt.0)/10000.
 	End do
 !**************************  /HR  
 
@@ -307,6 +314,7 @@ End do
 		close (10)
 	
 		call check( nf90_put_var(ncid, Albedo_varid, Albedo, start, count) )	
+		print*, k,' Max mes : ',Maxval(Albedo)/10., 'Min mes : ',Minval( Albedo, mask = Albedo.gt.0)/10.
 	End do
 !**************************   /Albeo  
 		
