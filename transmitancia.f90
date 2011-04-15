@@ -9,6 +9,9 @@
 !	Hora desfasada ...
 !	Revisar subrutinas de posicion solar	
 
+! Notas:
+! Humedad minima funcionando de 5%
+
 !Canal 1: [1728, 9020] 
 !Canal 4: [432, 2255]
 
@@ -349,7 +352,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  call check( nf90_inq_varid(ncid_var, "Albedo", Albedo_varid) )
  call check( nf90_inq_varid(ncid_var, "Alt", Alt_varid) )
  
- !call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
+ call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
   
  
  do rec = 1, Nhora
@@ -500,16 +503,18 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 !$omp do
 		Do i=1, NXf 	
 		! En funcion del archivo de altura se procesa o no el pixel.
-		!Altt  = Alt(i,j)
-		Altt  = 400.
+		Altt  = Alt(i,j)
+		!Altt  = 400.
 			
-		  IF ( Altt > 0. ) THEN 
+		 !If ( Altt > 0. ) then 
+		 If ( .true. ) then 
+			If ( Altt < 0 ) Altt = 0
 			
 			Tempt = Temp(i,j)/100.+ 273.15
-			!Tempt = 300.
+			!Tempt = 286.
 			HRt   =  HR(i,j)/10000.
 			!HRt   = 0.4
-			Albedot = albedo(i,j)/100.
+			Albedot = albedo(i,j)/1000.
 			!Albedot = 0.15
 			!Vist = vis(i,j)
 			Vist = 70.
