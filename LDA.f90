@@ -100,7 +100,7 @@ real, dimension (:,:), allocatable :: Xk
 real, dimension (k) :: L, P=0
 real, dimension (2,2) :: cw , ck, cw1
 real, dimension (2,k) :: xkm
-real, dimension (2,1) :: C1
+real, dimension (2,1) :: C1=0
 real, dimension (NXf*NYf,1) :: C2, VU
 
 VU=1.
@@ -146,16 +146,13 @@ call FINDInv(Cw, Cw1, 2, errorflag)
 if (errorflag/=0) print *, 'Error de inversion de matriz'
 
 do i= 1,k
-	C1 = Cw1*Xkm(:,i)
-	C2 = (transpose(-0.5*Xkm(:,i))*C1+Log(P(i)))*VU
-	D(:,i) = Xt*C1+C2
+	C1(:,1) = matmul(Cw1,Xkm(:,i))	
+	C2 = (matmul(reshape(-0.5*Xkm(:,i),(/1,2/)),C1)+Log(P(i)))*VU
+	D(:,i) = reshape(matmul(Xt,C1)+C2,(/NXf*NYf/)) 
 end do
 
-D
 
 end subroutine LDA2
-
-
 
 SUBROUTINE FINDInv(matrix, inverse, n, errorflag)
 	IMPLICIT NONE

@@ -53,14 +53,26 @@
  integer, dimension (Nlon,NLat) :: Latitud , Longitud, scatter_phase
  Integer :: L1, L2, TID, TIDmax
  Real :: mm
+ 
+ 
  !Variables Boetto
  integer, dimension(:,:), allocatable :: fboe
  integer, dimension(:), allocatable :: dboe
- integer :: nboe
+ integer :: nboe, DeltaSP, SPhase, clase
+ integer, dimension (NXf,NYf) :: Alt, DI
+ integer, dimension(NXf,NYf,800) :: DI3d
+ real, dimension (100,4) :: CI_0, CI_0i
+ real, dimension (100) :: CI_cs, CI_csi
+ real, dimension (NXf,NYf,100) :: CI_cs_pixel
+ real, dimension (100,4) :: Ponderador
+ real :: IC_max, clearsky, clearsky_pixel, cloudclass, pond
+ real, dimension (NXf,NYf) :: CCI_eff
+ integer :: CCI_varid
  
  ! Variables NETCDF 
  integer :: ncid, ncid_in, dia =31, status
  integer, parameter :: NDIMS = 3, NDIMS_IN = 2	      ! We are writing 2D data.
+
 
  real :: x(NX), y(NY), xf(NXf), yf(NYf)
  integer, dimension (NlonF, NLatF) :: CH1_out
@@ -199,30 +211,44 @@ End do
 !/Fin de Geolocalizacion 
 
 ! ! Boetto3
-! open (15,file='trainningmatrix.txt', status='old', ACTION='READ', IOSTAT=errorread)
-! if (errorread/=0) Then
-!	print *, ' No se encuentra archivo con matriz de entrenamiento'
-!	exit
-! end if	
+! Variables meteorologicas
+ call check( nf90_open('variables.nc', nf90_nowrite, ncid_var) )
+
+ call check( nf90_inq_varid(ncid_var, "Alt", Alt_varid) )
  
-! nboe =0
-! Do
-!	read (15,*, iostat= errorread) 
-!	if (errorread/=0) exit
-!	nboe = nboe+1
-!end do
+ call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
  
-! allocate (fboe (nboe, 4)) 
-! allocate (dboe (nboe)) 
-! do i=1, nboe
-!  read (15,1500) fboe(i), dboe(i)
-! end do
+ call check( nf90_close(ncid_var) )
+ 
+ CI_0=-9999
+ CI_cs = -9999
+ CI_cs_pixel = -9999
+ 
+
+ open (15,file='trainningmatrix.txt', status='old', ACTION='READ', IOSTAT=errorread)
+ if (errorread/=0) Then
+	print *, ' No se encuentra archivo con matriz de entrenamiento'
+	exit
+ end if	
+ 
+ nboe =0
+ Do
+	read (15,*, iostat= errorread) 
+	if (errorread/=0) exit
+	nboe = nboe+1
+ end do
+ 
+ allocate (fboe (nboe, 4)) 
+ allocate (dboe (nboe)) 
+ do i=1, nboe
+  read (15,1500) fboe(i), dboe(i)
+ end do
  
  
 !             C1  C4  SP  mes clase
-!1500 format ( F6.4, F6.2, F5.2, F2.0, I2) ! Lectura de p
+1500 format ( F6.4, F6.2, F5.2, F2.0, I2) ! Lectura de p
 
- !/BOetto
+!/BOetto
 
 
 
@@ -238,12 +264,117 @@ End do
 100 read (8,*, IOSTAT=errorread) filename
 filenamepathin = trim(pathin)//trim(filename)
  if(errorread == -1) then			! Fin de lista de archivos.
-    write (16,*)
+    
+    !Reinicio lectura para procedimiento Boetto
+    rec =0
+    Close(8)
+    open (unit=8, file=trim(argument), status='old', ACTION='READ', IOSTAT=errorread)
+110 read (8,*, IOSTAT=errorread) filename
+	filenamepathin = trim(pathin)//trim(filename)
+	if(errorread == -1) go to 200 ! salida en caso de terimnar archivo de lista
+
+	 string = trim(filename)
+	 ano=string(1:4)
+	 mes=string(5:6)
+	 cdia=string(7:8)
+	 hora=string(9:10)
+	 minu=string(11:12)
+	 foto=string(18:27)
+	 READ (ano,'(F4.0)') iano
+	 READ (mes,'(F2.0)') imes
+	 READ (cdia,'(F2.0)') idia
+	 READ (hora,'(F2.0)') ihora
+	 READ (minu,'(F2.0)') iminu
+	 ihora = ihora + iminu/60.
+	 
+	 call diajuliano (idia, imes, iano, diaj)   ! entrada de reales en ves de enteros.
+	 call sunae(iano,diaj,ihora, latit, longit,az,el,ha,dec,soldst)  
+
+	 if (el < 3.0) goto 110
+	 rec = rec + 1 
+	 start_hora =(/1/)
+	 start_hora(1) = rec
+	 count = (/ NX, NY, 1 /)
+	 countf = (/ NXf, NYf, 1 /)
+	 start = (/ 1, 1, 1 /)
+	 start(3) = rec
+ 
+	 ihorat = (ihora + (idia-1)*24)  ! Hora (hr_mes*100)
+	 call check( nf90_open(trim(filenamepathin), nf90_nowrite, ncid_in) )  ! Abre archivo de lectura en Disco externo! ncid_in
+	 
+	 call check( nf90_inq_varid(ncid_in, "gvar_ch1_fine", CH1_in_varid) )
+	 status = nf90_inq_varid (ncid_in, "scatter_phase", scatter_phase_varid)
+	 if(status /= nf90_noerr) then
+		SP = SP_month
+	 else 
+		call check( nf90_get_var(ncid_in, scatter_phase_varid, scatter_phase))
+		SP = scatter_phase(r4i:r4f,:NY)
+	 end if	
+
+	 call check( nf90_get_var(ncid_in, CH1_in_varid, CH1_out))  
+	 
+	 ! Recorte de imagenes
+	 CH1_in = CH1_out(r1i:r1f,1:NYf)
+	 
+	 CCI_eff=0
+	 
+	! Revision de matriz
+	do i = 1, NXf
+		do j = 1, NYf
+			SPhase= ninit(SP(Nint((i-1)/4.+1), Nint((j-1)/4.+1))/100.)
+
+			If (SPhase >100) SPhase = 100
+			if (SPhase <1) SPhase = 1
+			clase=DI3d(i,j,rec)
+			clearsky=CI_cs(SPhase)
+			clearsky_pixel=CI_cs_pixel(i,j,SPhase)
+			Cloudclass=CI_0(SPhase, clase)
+			Pond=Ponderador(SPhase,clase)
+			If (clase==1) then
+				if (clearsky_pixel/=-9999) then
+					if (cloudclass==0 .or. cloudclass==clearsky_pixel) then 
+						CCI_eff(i,j)=0
+					else
+						CCI_eff(i,j)=abs((CH1_in(i,j) -clearsky_pixel)/(cloudclass-clearsky_pixel))*pond 
+					end if
+				else
+					if (cloudclass==0 .or. cloudclass==clearsky) then
+						CCI_eff(i,j)=0
+					else
+						CCI_eff(i,j)=abs((CH1_in(i,j) -clearsky)/(cloudclass-clearsky))*pond
+					end if
+				end if
+			else
+				if (cloudclass==0 .or. cloudclass==clearsky) then
+					CCI_eff(i,j) =0
+				else
+					CCI_eff(i,j)=abs((CH1_in(i,j) -clearsky)/(cloudclass-clearsky))*pond
+				end if
+			end if
+		end do
+	end do
+	
+
+					
+			
+						
+		end do
+	 end do    
+	 
+	 go to 110
+	 
+    
+    
+    
+    
+    
+200    write (16,*)
     write (*,*)
     write (16,*) " Terminado exitoso del procesamiento de imagenes"
     write (*,*) " Terminado exitoso del procesamiento de imagenes"
     write (*,*)
     write (16,*)
+    
     
     print *,'Maximas: '
     print *,maxval(max1040),maxval(max1110), maxval(max1140),maxval(max1240),maxval(max1310),maxval(max1410)
@@ -275,7 +406,7 @@ filenamepathin = trim(pathin)//trim(filename)
     print *,maxval(min1610),maxval(min1640), maxval(min1710),maxval(min1740),maxval(min1840),maxval(min1910)
     print *,maxval(min1940),maxval(min2010), maxval(min2040),maxval(min2140),maxval(min2210),maxval(min2240)
     print *,
-    call check( nf90_put_var(ncid, min1040_varid, min1040 ) )
+    call check( nf90_put_var(ncid, min1040_varid, min1040 ) )	
     call check( nf90_put_var(ncid, min1110_varid, min1110 ) )
     call check( nf90_put_var(ncid, min1140_varid, min1140 ) )
     call check( nf90_put_var(ncid, min1240_varid, min1240 ) )
@@ -389,6 +520,7 @@ filenamepathin = trim(pathin)//trim(filename)
     call check( nf90_def_var(ncid, "Lat_CH1", NF90_SHORT, dimids2df, Lat_CH1_varid) )
     call check( nf90_def_var(ncid, "Lon_CH1", NF90_SHORT, dimids2df, Lon_CH1_varid) )
     call check( nf90_def_var(ncid, "scatter_phase", NF90_SHORT, dimids, sp_varid) )
+    call check( nf90_def_var(ncid, "CCI", NF90_SHORT, dimids, CCI_varid) )
     
     call check( nf90_def_var(ncid, "max1040", NF90_SHORT, dimids2df, max1040_varid) )
     call check( nf90_def_var(ncid, "max1110", NF90_SHORT, dimids2df, max1110_varid) )
@@ -491,6 +623,12 @@ filenamepathin = trim(pathin)//trim(filename)
     
     call check( nf90_put_att(ncid, hora_varid, "units", "UTC_hours_from_day1"))
     call check( nf90_put_att(ncid, hora_varid, "_CoordinateAxisType", "time"))
+      
+    call check( nf90_put_att(ncid, CCI_varid, "units", "%") ) 
+    call check( nf90_put_att(ncid, CCI_varid, "scale_factor", 0.01) ) 
+    call check( nf90_put_att(ncid, CCI_varid, "_CoordinateAxes", "time Lat_CH1 Lon_CH1") ) 
+    call check( nf90_put_att(ncid, CCI_varid, "standard_name", "Cloud Cover Index") ) 
+      
       
     call check( nf90_put_att(ncid, max1040_varid, "scale_factor", 0.01) )
     call check( nf90_put_att(ncid, max1110_varid, "scale_factor", 0.01) )
@@ -799,7 +937,78 @@ end do
 
  
 ! Prueba datos Boetto	
-!		call LDA(NXf, Nyf, Nx, Ny,nboe, real(CH1_in/10000.), real(CH4_in/-100.), SP/100., nint(mes), fboe, dboe, DI )	
+ call LDA(NXf, Nyf, Nx, Ny,nboe, real(CH1_in/10000.), real(CH4_in/-100.), SP/100., nint(mes), fboe, dboe, DI )	
+
+! Calculo de Max y Min Boetto
+  do i = 1, NXf
+    do j = 1, NYf    
+		SPhase= ninit(SP(Nint((i-1)/4.+1), Nint((j-1)/4.+1))/100.)
+
+		If (SPhase >100) SPhase = 100
+		if (SPhase <1) SPhase = 1
+		if (CI_0(SPhase,DI(i,j)) == -9999) then
+			CI_0(SPhase,DI(i,j)) = CH1_in(i,j)
+		Else if (DI(i,j) /= 1) then	
+			if (CH1_in(i,j)>CI_0(SPhase,DI(i,j))) CI_0(SPhase,DI(i,j)) = CH1_in(i,j)
+		end if
+		
+		If(DI(i,j)==1) then
+			If (CI_cs(SPhase)==-9999) then
+				CI_cs(SPhase)=CH1_in(i,j)
+			else
+				If(alt(i,j)>0.) then
+					If (CH1_in(i,j)<CI_cs(SPhase)) CI_cs(SPhase)= CH1_in(i,j)
+				end if
+			end if
+			
+			! Boetto es gay
+			If (CI_cs_pixel(i,j,Sphase)==-9999) then
+				CI_cs_pixel(i,j,Sphase)=CH1_in(i,j)
+			else
+				If(CH1_in(i,j)<CI_cs_pixel(i,j,Sphase)) CI_cs_pixel(i,j,Sphase) = CH1_in(i,j)
+			end if
+		end if
+	end do
+ end do
+ 
+ Do j=1,100
+	If ( .not.(CI_0(j,2)==-9999 .and. CI_0(j,3)==-9999 .and. CI_0(j,4)==-9999)) CI_0(j,1)=Maxval(CI_0(j,2:4))
+ end do	
+ CI_0i=-9999
+ CI_csi=-9999
+ 
+ Do i= 1,100
+	if (CI_cs(i)==-9999)CI_cs(i)=9999
+ end do
+ 
+ Do j= DeltaSP+1,100-DeltaSP
+	Do k=1,4
+		if (k==1) CI_csi(j) = minval(CI_cs((j-DeltaSP):(j+DeltaSP)))
+		CI_0i(j,k) = maxval(CI_0((j-DeltaSP):(j+DeltaSP),K))
+	end do
+ end do
+ 
+ CI_0=CI_0i
+ CI_cs= CI_csi
+ Ponderador=1
+ do j= 1,100
+	if (CI_0(j,2)/=-9999 .and. CI_0(j,3)/=-9999 .and. CI_0(j,4)/=-9999) then
+		IC_max=maxval(CI_0(j,2:4))
+		Ponderador(j,1) =1
+		Do i=2,4
+			Ponderador (j,i)=CI_0(j,i)/IC_max
+		end do
+	end if
+ end do
+ 
+ 
+ !Calculo del indice de cobertura de nubes
+ 
+		
+			
+			
+		
+			
 		
 ! /Prueba datos Boetto			
 
