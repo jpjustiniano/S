@@ -108,8 +108,8 @@
  max1710= 0;max1740= 0;max1840= 0;max1910= 0;max1940= 0;max2010= 0;max2040= 0;max2140= 0;max2210= 0; max2240= 0 
 
  min1040=10000;min1110=10000;min1140=10000;min1240=10000;min1310=10000;min1340=10000
- min1410=10000;min1440=10000;min1610=10000;min1710=10000;min1740=10000;min1840=10000;min1910=10000
- min1940=10000;min2010=10000;min2040=10000;min2140=10000;min2210=10000;min2240=10000
+ min1410=10000;min1440=10000;min1610=10000;min1640=10000;min1710=10000;min1740=10000;min1840=10000
+ min1910=10000;min1940=10000;min2010=10000;min2040=10000;min2140=10000;min2210=10000;min2240=10000
 !********************************************************** Fin declaracion Variables
  
  ! Parametros de uso
@@ -996,10 +996,6 @@ end do
  
  !Calculo del indice de cobertura de nubes
  
-		
-			
-			
-		
 			
 		
 ! /Prueba datos Boetto			
@@ -1021,6 +1017,10 @@ end do
 
  
  999 Stop
+
+!*********************************************************************** /Main
+
+!*********************************************************************** Subrutines
  
  contains
  subroutine check(status)
@@ -1031,9 +1031,6 @@ end do
   end if
  end subroutine check
 
-!*********************************************************************** /Main
-
-!*********************************************************************** Subrutines
 
 FUNCTION norm_hora(value)
 ! Cambio de hora a forma decimal
@@ -1309,6 +1306,7 @@ call LDA2 ( nc, NXf,NYf,fc(:,1:2), dc(:), Xt, DI2)
 
 end subroutine LDA
 
+
 subroutine LDA2 ( nc, NXf,NYf,fc, dc, Xt, DI2)
  
 implicit none
@@ -1379,6 +1377,7 @@ end do
 
 
 end subroutine LDA2
+
 
 SUBROUTINE FINDInv(matrix, inverse, n, errorflag)
 	IMPLICIT NONE
