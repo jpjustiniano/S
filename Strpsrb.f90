@@ -1,5 +1,6 @@
 !     calculate transmittance for clear and cloudy sky
-SUBROUTINE STRPSRB(LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,ISUB,TAUW,TOP,NCL,INTVAL,tstat,rf,zstat,CLOLWC,CDR,TRANS,TDIR)
+SUBROUTINE STRPSRB(LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,ISUB,TAUW,TOP,NCL,&
+	INTVAL,tstat,rf,zstat,CLOLWC,TRANS,TDIR)
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !     LATMOS  : atmosphere type
 !               1 - tropical
@@ -88,7 +89,9 @@ SUBROUTINE STRPSRB(LATMOS,TS,ROFF,SFCALB,VIS,THETA,ICLOUD,IWP,ISUB,TAUW,TOP,NCL,
 
       PARAMETER (LEVMAX = 51, LAYMAX = 50,MAXWEL=37 , MAXIND= 135)
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-
+	 
+	 real(8), parameter :: pi= acos(-1.0), cdr= pi/180.0
+	 
       real(8), dimension(LAYMAX,MAXIND) :: U,V
       real(8), dimension(LAYMAX,MAXWEL) :: ASIG
       real(8), dimension (LEVMAX) :: SCA, RAY

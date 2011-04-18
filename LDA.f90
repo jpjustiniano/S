@@ -2,7 +2,7 @@ Module Subs
 
 contains
 
- subroutine LDA (NXf, Nyf, Nx, Ny,nboe, CH1, CH4, SP, mes, fboe, dboe, DI ) 
+subroutine LDA (NXf, Nyf, Nx, Ny,nboe, CH1, CH4, SP, mes, fboe, dboe, DI ) 
 
 implicit none
 

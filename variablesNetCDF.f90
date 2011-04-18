@@ -1,5 +1,10 @@
 ! Copyright (C) 2011, Juan Pablo Justiniano  <jpjustiniano@gmail.com>
 ! Programa para el almacenaje de variables climatologicas en formato NetCDF
+
+
+! Notas:
+! Humedad minima funcionando de 5%
+! Temperatura minma establecida en 2ºC
   
  program variables
    use netcdf
