@@ -384,7 +384,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 	call check( nf90_get_var(ncid, CH1_varid, CH1_in, start, countf) ) 					   		   
 	call check( nf90_get_var(ncid, CH4_varid, CH4_in, start, count) )
 	
-	Select Case (NInt(horad*10)) ! Selector de maximo y minimos
+113	Select Case (NInt(horad*10)) ! Selector de maximo y minimos
 	Case (:107)
 		CH1_min_varid = min1040_varid
 		CH1_max_varid = max1040_varid
@@ -394,13 +394,13 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 	Case (116:118)
 		CH1_min_varid = min1140_varid
 		CH1_max_varid = max1140_varid
-	Case (121:127)
+	Case (121:128)
 		CH1_min_varid = min1240_varid
 		CH1_max_varid = max1240_varid
 	Case (131:132)
 		CH1_min_varid = min1310_varid
 		CH1_max_varid = max1310_varid		
-	Case (136:137)
+	Case (136:138)
 		CH1_min_varid = min1340_varid
 		CH1_max_varid = max1340_varid
 	Case (141:142)
@@ -448,7 +448,9 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 	Case Default
 		print *, ' Fuera de rango de max y min: ', rec, horad
 		write (16,*) ' Fuera de rango de max y min: ',rec, horad 
-		stop 2
+		print *, 'Asigne horario dentro de parametros establecidos:'
+		read (*,*) horad
+		go to 113
 	End Select	
 		
 	call check( nf90_get_var(ncid, CH1_min_varid, CH1_min) )
@@ -480,7 +482,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		
 		! subroutine ASTRO - calculation of eccentricity correction, declination an equation of time
 		! input: JDAY ; output: E0,DEC,ET
-		CALL ASTRO(diaj,E0,DEC,ET) 			!!  validar!! Da angulos menores que subrutina, produce imagenes sin rad!!
+		call ASTRO(diaj,E0,DEC,ET) 			!!  validar!! Da angulos menores que subrutina, produce imagenes sin rad!!
 		
 		YLATR= Lat_CH1(NXf/2,j)/100.*cdr 		! Optimizacion, Uso de latitud media.
 
@@ -655,8 +657,7 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
   end if
  end subroutine check
  
- 
-SUBROUTINE diajuliano (day, month, year, dayj)   
+ subroutine diajuliano (day, month, year, dayj)   
 ! Calculo de dia juliano
 
 IMPLICIT NONE
@@ -696,7 +697,7 @@ END DO
 
 END SUBROUTINE diajuliano
 
-SUBROUTINE ASTRO (JDAY,E0,DEC,ET)
+ subroutine ASTRO (JDAY,E0,DEC,ET)
 !     calculate eccentricity correction, declination e equation of time
 !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !     PI    : pi
