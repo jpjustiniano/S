@@ -204,7 +204,7 @@ inter2:	Do j = 1, Nhora
 	write (15,*)
 	write (15,*) 'Año;Mes;Dia;Hora(UTC);Global;Directa;Difusa;DNI'
 	Do 	j=1,Ndias
-		call diajuliano (i, mes, ano, dayj)  
+		call diajuliano (j, mes, ano, dayj)  
 		Do i=1,Nhora
 		call  sunae(ano,dayj, hora(i)/10.,iLat/100.,iLon/100.,az,el,ha,dec,soldst)
 		write (*,200) ano, mes, j, hora(i)/10., Global(i,j)*Globfact, Directa(i,j)*Dirfact,&
