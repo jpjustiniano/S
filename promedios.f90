@@ -52,6 +52,9 @@ Program Interpolacion_Imagenes_media_hora
 
 !********************************************************** Fin declaracion Variables
  
+ factormagico = 0.913
+ 
+ 
  print *
  print *, '                  Calculo de la interpolacion de Global y Directa'
  print *, '                  ************************************************'

@@ -11,6 +11,7 @@
 
 ! Notas:
 ! Humedad minima funcionando de 5%
+! Agregar imagen de inicio!
 
 !Canal 1: [1728, 9020] 
 !Canal 4: [432, 2255]
@@ -53,7 +54,7 @@
  integer :: x_varid, y_varid, xf_varid, yf_varid, dia_varid, hora_varid
  integer :: CH1_in_varid, CH4_in_varid
  integer :: CH1_varid, Ch4_varid, CH1_max_varid, CH1_min_varid
- integer :: Lat_CH4_varid, Lon_CH4_varid , Lat_CH1_varid, Lon_CH1_varid
+ integer :: Lat_CH4_varid, Lon_CH4_varid , Lat_CH1_varid, Lon_CH1_varid, CC_varid
  integer :: Lat_CH4_rad_varid, Lon_CH4_rad_varid , Lat_CH1_rad_varid, Lon_CH1_rad_varid 
  integer :: Alt_varid, Temp_varid, Albedo_varid, Vis_varid, HR_varid
  integer :: max1040_varid, max1110_varid, max1140_varid, max1240_varid, max1310_varid, max1340_varid
@@ -71,7 +72,7 @@
  ! Variables NETCDF archivo salida
  character(4)  :: cano
  character(2)  :: chora,cmin, cmes, cdia
- character(25) :: filename_out, ccname
+ character(30) :: filename_out, ccname
  character (30) :: filenamepathin, pathin, pathout
  integer :: ncid_rad
  integer :: x_dimid_rad, y_dimid_rad,hora_dimid_rad, xf_dimid_rad, yf_dimid_rad
@@ -99,7 +100,7 @@
  ! Parametros de uso
  pathin = '/media/Elements/dm/'  ! Directorio de archivos de entrada.. NO implementado aun.
  pathout = '/media/Elements/dm/' ! Directorio de archivos de salida.. NO implementado aun
- TIDmax = 7    ! Numero de procesadores maximo a utilizar
+ TIDmax = 7   ! Numero de procesadores maximo a utilizar
  
  !$    TID = omp_get_num_procs()
  !$		If (TID>TIDmax) TID = TIDmax
@@ -351,7 +352,6 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
  call check( nf90_inq_varid(ncid_var, "HR", HR_varid) )
  call check( nf90_inq_varid(ncid_var, "Albedo", Albedo_varid) )
  call check( nf90_inq_varid(ncid_var, "Alt", Alt_varid) )
- 
  call check( nf90_get_var (ncid_var, Alt_varid, Alt) )
   
  
@@ -381,7 +381,8 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 !	  vis = 10.	! (km)
 		
 	
-	call check( nf90_get_var(ncid, CH1_varid, CH1_in, start, countf) ) 					   		   
+	call check( nf90_get_var(ncid, CH1_varid, CH1_in, start, countf) ) 	
+	!call check( nf90_get_var(ncid, CC_varid, CC, start, countf) )				   		   
 	call check( nf90_get_var(ncid, CH4_varid, CH4_in, start, count) )
 	
 113	Select Case (NInt(horad*10)) ! Selector de maximo y minimos
@@ -460,17 +461,17 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 		write(chora,'(I2)') Int(horad) 
 		write(cmin,'(I2)') NInt((horad-Int(horad))*60)
 		If (dia < 10 ) then
-			write(cdia,'(I1)') NInt(dia)+1
+			write(cdia,'(I1)') NInt(dia)
 			cdia='0'//trim(cdia)
 		Else
-			write(cdia,'(I2)') NInt(dia)+1
+			write(cdia,'(I2)') NInt(dia)
 		End if
-!		ccname=cano//cmes//cdia//chora//cmin//'.txt'
-!		write (*,*) ccname, cdia,dia, chora,hora(rec), cmin
-!		open (10,file=ccname, status='old', ACTION='READ', IOSTAT=errorread)
-!		if (errorread/=0) cycle
+		ccname='./Boetto/'//cano//cmes//cdia//chora//cmin//'.txt'
+		!write (*,*) ccname, cdia,dia, chora,hora(rec), cmin
+		open (10,file=ccname, status='old', ACTION='READ', IOSTAT=errorread)
+		if (errorread/=0) cycle
 		
-!		read (10,*) ((cc(ii,jj), jj = 1, NYf), ii=1, NXf)
+		read (10,*) ((cc(ii,jj), jj = 1, NYf), ii=1, NXf)
 
 !		call LDA(NXf, Nyf, Nx, Ny,nboe, real(CH1_in/10000.), real(CH4_in/-100.), SP/100., nint(mes), fboe, dboe, DI )
 			
@@ -542,15 +543,15 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 			end if
 			
 !			! Calculo de Cobertura de nubes.
-			if ( CH1_max(i,j) > 2500 .and. CH1_max(i,j)-CH1_min(i,j)>0.1 ) Then    		! Comprobar valor optimo de minimo de Maximos
-					XIM =  (CH1_in(i,j)-CH1_min(i,j))/((CH1_max(i,j)-CH1_min(i,j) ) *1.)
-			Else
-				!XIM = (CH1_in(i,j)-CH1_min(i,j))/((7000. - CH1_min(i,j))*1.)
-				 XIM = 0.000
-			End if
+!			if ( CH1_max(i,j) > 2500 .and. CH1_max(i,j)-CH1_min(i,j)>0.1 ) Then    		! Comprobar valor optimo de minimo de Maximos
+!					XIM =  (CH1_in(i,j)-CH1_min(i,j))/((CH1_max(i,j)-CH1_min(i,j) ) *1.)
+!			Else
+!				!XIM = (CH1_in(i,j)-CH1_min(i,j))/((7000. - CH1_min(i,j))*1.)
+!				 XIM = 0.000
+!			End if
 
 ! Prueba datos Boetto	
-			!XIM =cc(i,j)/10000.
+			XIM =cc(i,j)/10000.
 ! /Prueba datos Boetto				
 			
 			! Choose atmosphere by surface temperature

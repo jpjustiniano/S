@@ -21,7 +21,7 @@ program extraccion
  integer,dimension(8) :: tiempo, tiempof, tiempoa
  integer :: TIDmax
  real :: Globfact, Dirfact, Latfact, Lonfact, horad, lat, lon
- real :: az,el,ha,dec,soldst
+ real :: az,el,ha,dec,soldst, factormagico
  
  integer, dimension(:,:), allocatable :: Nimagen, Lat_CH1, Lon_CH1
  integer, dimension(:,:), allocatable :: Global, Directa, Difusa, DNI
@@ -151,6 +151,11 @@ inter: Do
 	call check( nf90_get_var (ncid, Global_varid, Global, start, count) )
 	call check( nf90_get_var (ncid, Directa_varid, Directa, start, count) )	
 	
+	where (Global<0) Global =0
+	where (Directa<0) Directa =0
+	Where (Global>1500) Global = 0
+	where (Directa>1500) Directa =0
+	
 	write (15,*)
 	write (*,*)  ' Año Mes Dia Hora(UTC) Global   Directa   Difusa   DNI   el'
 	write (15,*) 'Año;Mes;Dia;Hora(UTC);Global;Directa;Difusa;DNI'
@@ -200,6 +205,13 @@ inter2:	Do j = 1, Nhora
 	call check( nf90_get_var (ncid, Global_varid, Global, start, count) )
 	call check( nf90_get_var (ncid, Directa_varid, Directa, start, count) )
 	
+	where (Global<0) Global =0
+	where (Directa<0) Directa =0
+	Where (Global>1500) Global = 0
+	where (Directa>1500) Directa =0
+	
+	
+	
 	write (*,*) ' Año Mes Dia Hora(UTC) Global   Directa   Difusa   DNI   el'
 	write (15,*)
 	write (15,*) 'Año;Mes;Dia;Hora(UTC);Global;Directa;Difusa;DNI'
@@ -207,11 +219,11 @@ inter2:	Do j = 1, Nhora
 		call diajuliano (j, mes, ano, dayj)  
 		Do i=1,Nhora
 		call  sunae(ano,dayj, hora(i)/10.,iLat/100.,iLon/100.,az,el,ha,dec,soldst)
-		write (*,200) ano, mes, j, hora(i)/10., Global(i,j)*Globfact, Directa(i,j)*Dirfact,&
-			(Global(i,j)- Directa(i,j))*Globfact, Directa(i,j)*Dirfact/sin(el*3.141592/180.), el
+		write (*,200) ano, mes, j, hora(i)/10., Global(i,j)*Globfact*factormagico, Directa(i,j)*Dirfact*factormagico,&
+			(Global(i,j)- Directa(i,j))*Globfact*factormagico, Directa(i,j)*Dirfact/sin(el*3.141592/180.)*factormagico, el
 
-		write (15,215)  ano, mes, j, hora(i)/10., Global(i,j)*Globfact, Directa(i,j)*Dirfact,&
-			(Global(i,j)- Directa(i,j))*Globfact, Directa(i,j)*Dirfact/sin(el*3.141592/180.)
+		write (15,215)  ano, mes, j, hora(i)/10., Global(i,j)*Globfact*factormagico, Directa(i,j)*Dirfact*factormagico,&
+			(Global(i,j)- Directa(i,j))*Globfact*factormagico, Directa(i,j)*Dirfact/sin(el*3.141592/180.)*factormagico
 		End do
 	end do
  End if
