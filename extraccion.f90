@@ -34,6 +34,8 @@ program extraccion
  
  
 !********************************************************** Fin declaracion Variables
+
+factormagico = 0.913
  
  
  print *
@@ -153,8 +155,17 @@ inter: Do
 	
 	where (Global<0) Global =0
 	where (Directa<0) Directa =0
-	Where (Global>1500) Global = 0
-	where (Directa>1500) Directa =0
+	Where (Global>15000) Global = 0
+	where (Directa>15000) Directa =0
+	
+	do i = 2,Nhora-1
+		If  (Global ( i, 1) ==0 .and.  Global ( i-1, 1) >0 .and.  Global ( i+1, 1) >0 ) then
+			Global ( i, 1) = (Global ( i-1, 1) + Global ( i+1, 1))/2.
+		end if 
+		If  (Directa ( i, 1) ==0 .and.  Directa ( i-1, 1) >0 .and.  Directa ( i+1, 1) >0 ) then
+			Directa ( i, 1) = (Directa ( i-1, 1) + Directa ( i+1, 1))/2.
+		end if 
+	end do	
 	
 	write (15,*)
 	write (*,*)  ' Año Mes Dia Hora(UTC) Global   Directa   Difusa   DNI   el'
@@ -194,6 +205,7 @@ inter2:	Do j = 1, Nhora
 	call check( nf90_get_att(ncid, Global_varid, "scale_factor", Globfact))
 	call check( nf90_get_att(ncid, Directa_varid, "scale_factor", Dirfact))
 
+	if (diasmes/=Ndias) print*, 'Diasmes: ',diasmes,' Ndias: ', Ndias
 	allocate (Global ( Nhora, Ndias))
 	allocate (Directa ( Nhora, Ndias))
 	allocate (Difusa ( Nhora, Ndias))
@@ -207,9 +219,19 @@ inter2:	Do j = 1, Nhora
 	
 	where (Global<0) Global =0
 	where (Directa<0) Directa =0
-	Where (Global>1500) Global = 0
-	where (Directa>1500) Directa =0
+	Where (Global>15000) Global = 0
+	where (Directa>15000) Directa =0
 	
+	Do 	j=1,Ndias
+		do i = 2,Nhora-1
+			If  (Global ( i, j) ==0 .and.  Global ( i-1, j) >0 .and.  Global ( i+1, j) >0 ) then
+				Global ( i, j) = (Global ( i-1, j) + Global ( i+1, j))/2.
+			end if 
+			If  (Directa ( i, j) ==0 .and.  Directa ( i-1, j) >0 .and.  Directa ( i+1, j) >0 ) then
+				Directa ( i, j) = (Directa ( i-1, j) + Directa ( i+1, j))/2.
+			end if 
+		end do	
+	end do
 	
 	
 	write (*,*) ' Año Mes Dia Hora(UTC) Global   Directa   Difusa   DNI   el'
@@ -218,12 +240,12 @@ inter2:	Do j = 1, Nhora
 	Do 	j=1,Ndias
 		call diajuliano (j, mes, ano, dayj)  
 		Do i=1,Nhora
-		call  sunae(ano,dayj, hora(i)/10.,iLat/100.,iLon/100.,az,el,ha,dec,soldst)
-		write (*,200) ano, mes, j, hora(i)/10., Global(i,j)*Globfact*factormagico, Directa(i,j)*Dirfact*factormagico,&
-			(Global(i,j)- Directa(i,j))*Globfact*factormagico, Directa(i,j)*Dirfact/sin(el*3.141592/180.)*factormagico, el
+			call  sunae(ano,dayj, hora(i)/10.,iLat/100.,iLon/100.,az,el,ha,dec,soldst)
+			write (*,200) ano, mes, j, hora(i)/10., Global(i,j)*Globfact, Directa(i,j)*Dirfact,&
+			(Global(i,j)- Directa(i,j))*Globfact, Directa(i,j)*Dirfact/sin(el*3.141592/180.), el
 
-		write (15,215)  ano, mes, j, hora(i)/10., Global(i,j)*Globfact*factormagico, Directa(i,j)*Dirfact*factormagico,&
-			(Global(i,j)- Directa(i,j))*Globfact*factormagico, Directa(i,j)*Dirfact/sin(el*3.141592/180.)*factormagico
+			write (15,215)  ano, mes, j, hora(i)/10., Global(i,j)*Globfact, Directa(i,j)*Dirfact,&
+			(Global(i,j)- Directa(i,j))*Globfact, Directa(i,j)*Dirfact/sin(el*3.141592/180.)
 		End do
 	end do
  End if

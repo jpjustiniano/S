@@ -459,7 +459,15 @@ call check( nf90_put_att(ncid_rad, Lon_CH1_rad_varid, "_CoordinateAxisType", "Lo
 	
 ! Prueba datos Boetto	
 		write(chora,'(I2)') Int(horad) 
-		write(cmin,'(I2)') NInt((horad-Int(horad))*60)
+		
+		If (NInt((horad-Int(horad))*60) < 10 ) then
+			write(cmin,'(I1)') NInt((horad-Int(horad))*60)
+			cmin='0'//trim(cmin)
+		Else
+			write(cmin,'(I2)') NInt((horad-Int(horad))*60)
+		End if
+		
+		
 		If (dia < 10 ) then
 			write(cdia,'(I1)') NInt(dia)
 			cdia='0'//trim(cdia)
